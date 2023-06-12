@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(trajopt)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
@@ -43,6 +43,8 @@ option(BUILD_SENSORSIM "build sensor simulation" OFF)
 
 include("${CMAKE_SOURCE_DIR}/cmake/boost-python.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
+
+SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
 
 
 add_subdirectory(ext)
