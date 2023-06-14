@@ -8,7 +8,7 @@ include_directories(
 )
 
 if (NOT APPLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=default")
 endif()
 
 add_library(trajopt
@@ -27,6 +27,14 @@ add_library(trajopt
 	bullet_unity.cpp
 )
 target_link_libraries(trajopt ${OpenRAVE_BOTH_LIBRARIES} ${Boost_SYSTEM_LIBRARY} sco utils json osgviewer)
+target_include_directories(trajopt PUBLIC 
+SYSTEM
+${BULLET_INCLUDE_DIRS}  
+${Boost_INCLUDE_DIRS}
+${Eigen_INCLUDE_DIRS}
+${OpenRAVE_INCLUDE_DIRS}
+${JSON_INCLUDE_DIRS}
+)
 
 add_subdirectory(test)
 

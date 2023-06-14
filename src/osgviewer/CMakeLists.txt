@@ -30,4 +30,4 @@ add_library(osgviewer
 target_link_libraries(osgviewer ${OSG_LIBRARIES} ${OpenRAVE_BOTH_LIBRARIES} ${Boost_SYSTEM_LIBRARY} utils)
 
 
-#add_subdirectory(test)
+add_subdirectory(test)

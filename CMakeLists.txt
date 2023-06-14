@@ -50,3 +50,5 @@ SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
 add_subdirectory(ext)
 add_subdirectory(src)
 
+add_subdirectory(cpp_examples)
+
