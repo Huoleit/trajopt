@@ -12,6 +12,8 @@
 
 #include "utils/eigen_conversions.hpp"
 
+#include "get_data_dir.h"
+
 // Debug
 #include "utils/stl_to_string.hpp"
 
@@ -47,7 +49,7 @@ int main()
         FAIL_IF_FALSE(success);
     }
     {
-        bool success = env->Load("/home/wentao/trajopt/data/table.xml");
+        bool success = env->Load(getDataPath()+"/table.xml");
         FAIL_IF_FALSE(success);
     }
     viewer.reset(new OSGViewer(env));
@@ -61,7 +63,7 @@ int main()
     robot->SetTransform(I);
 
     ProblemConstructionInfo pci(env);
-    Json::Value root = readJsonFile("/home/wentao/trajopt/data/arm_around_table.json");
+    Json::Value root = readJsonFile(getDataPath()+"/arm_around_table.json");
     pci.fromJson(root);
     pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
     TrajOptProbPtr prob = ConstructProblem(pci);

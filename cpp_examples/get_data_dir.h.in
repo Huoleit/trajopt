@@ -1,0 +1,7 @@
+#pragma once 
+
+#include <string>
+
+inline std::string getDataPath() {
+  return "@PROJECT_DATA_DIR@";
+}

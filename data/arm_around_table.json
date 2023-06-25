@@ -1,6 +1,6 @@
 {
   "basic_info" : {
-    "n_steps" : 100,
+    "n_steps" : 10,
     "manip" : "rightarm",
     "start_fixed" : true
   },
