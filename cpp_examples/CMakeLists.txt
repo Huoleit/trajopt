@@ -9,7 +9,6 @@ configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/get_data_dir.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/include/get_data_dir.h" @ONLY
 )
-message(FATA_ERROR "${CMAKE_CURRENT_BINARY_DIR}")
 
 add_executable(arm_cpp arm.cpp)
 target_link_libraries(arm_cpp trajopt osgviewer)
