@@ -30,7 +30,8 @@
 				"tombonnike.vscode-status-bar-format-toggle",
 				"eamodio.gitlens",
 				"xaver.clang-format",
-				"ms-vscode.cpptools-extension-pack"
+				"ms-vscode.cpptools-extension-pack",
+				"GitHub.copilot"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",

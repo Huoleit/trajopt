@@ -105,6 +105,18 @@
         "texture": "cpp",
         "buffered_value": "cpp",
         "fast_back_stack": "cpp",
-        "serializer": "cpp"
+        "serializer": "cpp",
+        "shape": "cpp",
+        "block": "cpp",
+        "nodevisitor": "cpp",
+        "timer": "cpp",
+        "uniform": "cpp",
+        "globjectsvisitor": "cpp",
+        "intersectionvisitor": "cpp",
+        "renderleaf": "cpp",
+        "forward_list": "cpp",
+        "textbase": "cpp",
+        "transform": "cpp",
+        "*.cci": "cpp"
     }
 }
