@@ -14,7 +14,7 @@
 		"/tmp/.X11-unix/:/tmp/.X11-unix/"
 	],
 	// Features to add to the dev container. More info: https://containers.dev/features.
-	"features": {},
+	"features": { },
 	"capAdd": [
 		"SYS_PTRACE"
 	],
@@ -31,7 +31,8 @@
 				"eamodio.gitlens",
 				"xaver.clang-format",
 				"ms-vscode.cpptools-extension-pack",
-				"GitHub.copilot"
+				"GitHub.copilot",
+				"ms-azuretools.vscode-docker"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",
@@ -41,7 +42,9 @@
 				"cmake.generator": "Unix Makefiles",
 				"cmake.configureEnvironment": {
 					"-DCMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
-				}
+				},
+				"clang-format.fallbackStyle": "Google",
+				"clang-format.executable": "clang-format-10"
 			}
 		}
 	},

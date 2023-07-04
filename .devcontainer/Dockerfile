@@ -34,6 +34,9 @@ COPY install-openrave.sh /tmp/
 RUN --mount=type=cache,target=/var/cache/apt \
     chmod +x /tmp/install-openrave.sh && /tmp/install-openrave.sh
 
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get -y install --no-install-recommends \
+    clang-format-10
+
 USER vscode
 CMD ["/bin/zsh"]
 
