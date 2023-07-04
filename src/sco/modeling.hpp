@@ -177,20 +177,21 @@ public:
   void addIneqConstraint(ConstraintPtr);
   virtual ~OptProb() {}
   /** Find closest point to solution vector x that satisfies linear inequality constraints */
-  vector<double> getCentralFeasiblePoint(const vector<double>& x);
-  vector<double> getClosestFeasiblePoint(const vector<double>& x);
+  vector<double> getCentralFeasiblePoint(const vector<double>& x) const;
+  vector<double> getClosestFeasiblePoint(const vector<double>& x) const;
 
   vector<ConstraintPtr> getConstraints() const;
-  vector<CostPtr>& getCosts() {return costs_;}
-  vector<ConstraintPtr>& getIneqConstraints() {return ineqcnts_;}
-  vector<ConstraintPtr>& getEqConstraints() {return eqcnts_;}
-  DblVec& getLowerBounds() {return lower_bounds_;}
-  DblVec& getUpperBounds() {return upper_bounds_;}
-  ModelPtr getModel() {return model_;}
-  vector<Var>& getVars() {return vars_;}
-  int getNumCosts() {return costs_.size();}
-  int getNumConstraints() {return eqcnts_.size() + ineqcnts_.size();}
-  int getNumVars() {return vars_.size();}
+
+  const vector<CostPtr>& getCosts() const {return costs_;}
+  const vector<ConstraintPtr>& getIneqConstraints() const {return ineqcnts_;}
+  const vector<ConstraintPtr>& getEqConstraints() const {return eqcnts_;}
+  const DblVec& getLowerBounds() const {return lower_bounds_;}
+  const DblVec& getUpperBounds() const {return upper_bounds_;}
+  ModelPtr getModel() const {return model_;}
+  const vector<Var>& getVars() const {return vars_;}
+  int getNumCosts() const {return costs_.size();}
+  int getNumConstraints() const {return eqcnts_.size() + ineqcnts_.size();}
+  int getNumVars() const {return vars_.size();}
 
 protected:
   ModelPtr model_;

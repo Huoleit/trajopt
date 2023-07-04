@@ -23,15 +23,15 @@ void PlotTraj(OSGViewer& viewer, Configuration& rad, const TrajArray& x, vector<
   }
 }
 
-void PlotCosts(OSGViewer& viewer, vector<CostPtr>& costs, vector<ConstraintPtr>& cnts, Configuration& rad, const VarArray& vars, const DblVec& x) {
+void PlotCosts(OSGViewer& viewer, const vector<CostPtr>& costs, const vector<ConstraintPtr>& cnts, Configuration& rad, const VarArray& vars, const DblVec& x) {
   vector<GraphHandlePtr> handles;
   handles.clear();
-  BOOST_FOREACH(CostPtr& cost, costs) {
+  BOOST_FOREACH(const CostPtr& cost, costs) {
     if (Plotter* plotter = dynamic_cast<Plotter*>(cost.get())) {
       plotter->Plot(x, *rad.GetEnv(), handles);
     }
   }
-  BOOST_FOREACH(ConstraintPtr& cnt, cnts) {
+  BOOST_FOREACH(const ConstraintPtr& cnt, cnts) {
     if (Plotter* plotter = dynamic_cast<Plotter*>(cnt.get())) {
       plotter->Plot(x, *rad.GetEnv(), handles);
     }
