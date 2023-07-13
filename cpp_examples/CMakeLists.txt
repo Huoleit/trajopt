@@ -12,3 +12,6 @@ configure_file (
 
 add_executable(arm_cpp arm.cpp)
 target_link_libraries(arm_cpp trajopt osgviewer)
+
+add_executable(armload armload.cpp)
+target_link_libraries(armload trajopt osgviewer)
