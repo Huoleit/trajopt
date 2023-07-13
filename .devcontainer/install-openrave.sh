@@ -19,7 +19,7 @@ fi
 echo ""
 echo "Downgrading sympy to version 0.7.1..."
 echo ""
-pip install --upgrade --user sympy==0.7.1
+pip install --upgrade sympy==0.7.1
 
 # OpenRAVE
 if [ ${UBUNTU_VER} = '14.04' ] || [ ${UBUNTU_VER} = '16.04' ]; then
