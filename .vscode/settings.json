@@ -117,6 +117,19 @@
         "forward_list": "cpp",
         "textbase": "cpp",
         "transform": "cpp",
-        "*.cci": "cpp"
+        "*.cci": "cpp",
+        "core": "cpp",
+        "viewerbase": "cpp",
+        "orbitmanipulator": "cpp",
+        "standardmanipulator": "cpp",
+        "math": "cpp",
+        "matrixd": "cpp",
+        "matrixf": "cpp",
+        "matrixtransform": "cpp",
+        "group": "cpp",
+        "camera": "cpp",
+        "viewer": "cpp",
+        "stateset": "cpp",
+        "drawable": "cpp"
     }
 }

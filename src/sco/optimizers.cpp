@@ -114,6 +114,24 @@ void printCostInfo(const vector<double>& old_cost_vals, const vector<double>& mo
 
 }
 
+void printLinearConstraintsInfo(const vector<double>& old_cnt_vals, const vector<double>& new_cnt_vals,
+                                const vector<string>& cnt_names) {
+  if (cnt_names.size() == 0) return;
+
+  printf("%15s | %10s | %10s | %10s | %10s\n", "", "old", "new", "dexact", "ratio");
+
+  printf("%15s | %10s---%10s---%10s---%10s\n", "LINEAR CONST", "----------", "----------", "----------", "----------");
+  for (size_t i = 0; i < old_cnt_vals.size(); ++i) {
+    double exact_improve = old_cnt_vals[i] - new_cnt_vals[i];
+    if (fabs(old_cnt_vals[i]) > 1e-8)
+      printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e\n", cnt_names[i].c_str(), old_cnt_vals[i],
+             new_cnt_vals[i], exact_improve, exact_improve / old_cnt_vals[i]);
+    else
+      printf("%15s | %10.3e | %10.3e | %10.3e | %10s\n", cnt_names[i].c_str(), old_cnt_vals[i],
+             new_cnt_vals[i], exact_improve, "  ------  ");
+  }
+}
+
 // todo: use different coeffs for each constraint
 vector<ConvexObjectivePtr> cntsToCosts(const vector<ConvexConstraintsPtr>& cnts, double err_coeff, Model* model) {
   vector<ConvexObjectivePtr> out;
@@ -223,6 +241,11 @@ OptStatus BasicTrustRegionSQP::optimize() {
   vector<ConstraintPtr> constraints = prob_->getConstraints();
   vector<string> cnt_names = getCntNames(constraints);
 
+  vector<ConstraintPtr> linearConstraints = prob_->getLinearConstraints();
+  vector<string> linearConstraints_names = getCntNames(linearConstraints);
+
+  DblVec old_linearCnt_viols(linearConstraints.size());
+
   DblVec& x_ = results_.x; // just so I don't have to rewrite code
   if (x_.size() == 0) PRINT_AND_THROW("you forgot to initialize!");
   if (!prob_) PRINT_AND_THROW("you forgot to set the optimization problem");    
@@ -245,6 +268,9 @@ OptStatus BasicTrustRegionSQP::optimize() {
       if (results_.cost_vals.empty() && results_.cnt_viols.empty()) { //only happens on the first iteration
         results_.cnt_viols = evaluateConstraintViols(constraints, x_);
         results_.cost_vals = evaluateCosts(prob_->getCosts(), x_);
+
+        old_linearCnt_viols = evaluateConstraintViols(linearConstraints, x_);
+
         assert(results_.n_func_evals == 0);
         ++results_.n_func_evals;
       }
@@ -313,6 +339,9 @@ OptStatus BasicTrustRegionSQP::optimize() {
 
         DblVec new_cost_vals = evaluateCosts(prob_->getCosts(), new_x);
         DblVec new_cnt_viols = evaluateConstraintViols(constraints, new_x);
+
+        DblVec new_linearCnt_viols = evaluateConstraintViols(linearConstraints, new_x);
+
         ++results_.n_func_evals;
 
         double old_merit = vecSum(results_.cost_vals) + merit_error_coeff_ * vecSum(results_.cnt_viols);
@@ -327,6 +356,7 @@ OptStatus BasicTrustRegionSQP::optimize() {
           printCostInfo(results_.cost_vals, model_cost_vals, new_cost_vals,
                         results_.cnt_viols, model_cnt_viols, new_cnt_viols, cost_names,
                         cnt_names, merit_error_coeff_);
+          printLinearConstraintsInfo(old_linearCnt_viols, new_linearCnt_viols, linearConstraints_names);
           printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e\n", "TOTAL", old_merit, approx_merit_improve, exact_merit_improve, merit_improve_ratio);
         }
 
@@ -354,6 +384,9 @@ OptStatus BasicTrustRegionSQP::optimize() {
           results_.cost_vals = new_cost_vals;
           results_.cnt_viols = new_cnt_viols;
           adjustTrustRegion(trust_expand_ratio_);
+
+          old_linearCnt_viols = new_linearCnt_viols;
+
           LOG_INFO("expanded trust region. new box size: %.4f",trust_box_size_);
           break;
         }

@@ -63,7 +63,7 @@ int main()
     robot->SetTransform(I);
 
     ProblemConstructionInfo pci(env);
-    Json::Value root = readJsonFile(getDataPath()+"/arm_around_table.json");
+    Json::Value root = readJsonFile(getDataPath()+"/time_optimal.json");
     pci.fromJson(root);
     pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
     TrajOptProbPtr prob = ConstructProblem(pci);
@@ -74,6 +74,8 @@ int main()
     plotter.Add(prob->getCosts());
     opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, boost::ref(plotter), _1, _2));
     plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
+
+    cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
 
     opt.initialize(trajToDblVec(prob->GetInitTraj()));
     opt.optimize();

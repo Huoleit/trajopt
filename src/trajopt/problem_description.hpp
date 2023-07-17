@@ -222,6 +222,13 @@ struct JointVelCostInfo : public TermInfo, public MakesCost {
   DEFINE_CREATE(JointVelCostInfo)
 };
 
+struct JointAccCostInfo : public TermInfo, public MakesCost {
+  DblVec coeffs;
+  void fromJson(const Value& v);
+  void hatch(TrajOptProb& prob);
+  DEFINE_CREATE(JointAccCostInfo)
+};
+
 struct JointVelConstraintInfo : public TermInfo, public MakesConstraint {
   DblVec vals;
   int first_step, last_step;

@@ -124,7 +124,7 @@ public:
   /** Calculate constraint violations (positive part for inequality constraint, absolute value for inequality constraint)*/
   vector<double> violations(const vector<double>& x);
   /** Sum of violations */
-  double violation(const vector<double>& x);
+  virtual double violation(const vector<double>& x);
   /** Get problem variables associated with this constraint */
   virtual VarVector getVars() {return VarVector();}
 
@@ -175,12 +175,15 @@ public:
   void addConstraint(ConstraintPtr);
   void addEqConstraint(ConstraintPtr);
   void addIneqConstraint(ConstraintPtr);
+
+  void addIneqConstraintEvaluation(ConstraintPtr);
   virtual ~OptProb() {}
   /** Find closest point to solution vector x that satisfies linear inequality constraints */
   vector<double> getCentralFeasiblePoint(const vector<double>& x) const;
   vector<double> getClosestFeasiblePoint(const vector<double>& x) const;
 
   vector<ConstraintPtr> getConstraints() const;
+  vector<ConstraintPtr> getLinearConstraints() const;
 
   const vector<CostPtr>& getCosts() const {return costs_;}
   const vector<ConstraintPtr>& getIneqConstraints() const {return ineqcnts_;}
@@ -201,6 +204,8 @@ protected:
   vector<CostPtr> costs_;
   vector<ConstraintPtr> eqcnts_;
   vector<ConstraintPtr> ineqcnts_;
+
+  vector<ConstraintPtr> linearIneqcnts_;
 
   OptProb(OptProb&);
 };

@@ -6,6 +6,7 @@
 #include "sco/expr_op_overloads.hpp"
 #include "trajopt/kinematic_terms.hpp"
 #include "trajopt/trajectory_costs.hpp"
+#include "trajopt/trajectory_linear_constraints.hpp"
 #include "trajopt/collision_terms.hpp"
 #include "trajopt/rave_utils.hpp"
 #include "trajopt/rave_utils.hpp"
@@ -14,6 +15,7 @@
 #include "utils/eigen_slicing.hpp"
 #include <boost/algorithm/string.hpp>
 #include "sco/optimizers.hpp"
+
 using namespace Json;
 using namespace std;
 using namespace OpenRAVE;
@@ -48,6 +50,7 @@ void RegisterMakers() {
   TermInfo::RegisterMaker("pose", &PoseCostInfo::create);
   TermInfo::RegisterMaker("joint_pos", &JointPosCostInfo::create);
   TermInfo::RegisterMaker("joint_vel", &JointVelCostInfo::create);
+  TermInfo::RegisterMaker("joint_acc", &JointAccCostInfo::create);
   TermInfo::RegisterMaker("collision", &CollisionCostInfo::create);
 
   TermInfo::RegisterMaker("joint", &JointConstraintInfo::create);
@@ -188,6 +191,12 @@ void InitInfo::fromJson(const Json::Value& v) {
     }
   }
   else if (type_str == "straight_line") {
+    DblVec startpoint;
+    childFromJson(v, startpoint, "startpoint");
+    if (startpoint.size() != n_dof) {
+      PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j")%n_dof%startpoint.size());
+    }
+
     FAIL_IF_FALSE(v.isMember("endpoint"));
     DblVec endpoint;
     childFromJson(v, endpoint, "endpoint");
@@ -195,9 +204,8 @@ void InitInfo::fromJson(const Json::Value& v) {
       PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j")%n_dof%endpoint.size());
     }
     data = TrajArray(n_steps, n_dof);
-    DblVec start = gPCI->rad->GetDOFValues();
     for (int idof = 0; idof < n_dof; ++idof) {
-      data.col(idof) = VectorXd::LinSpaced(n_steps, start[idof], endpoint[idof]);
+      data.col(idof) = VectorXd::LinSpaced(n_steps, startpoint[idof], endpoint[idof]);
     }
   }
 
@@ -457,6 +465,24 @@ void JointVelCostInfo::hatch(TrajOptProb& prob) {
   prob.getCosts().back()->setName(name);
 }
 
+void JointAccCostInfo::fromJson(const Value& v) {
+  FAIL_IF_FALSE(v.isMember("params"));
+  const Value& params = v["params"];
+
+  childFromJson(params, coeffs,"coeffs");
+  int n_dof = gPCI->rad->GetDOF();
+  if (coeffs.size() == 1) coeffs = DblVec(n_dof, coeffs[0]);
+  else if (coeffs.size() != n_dof) {
+    PRINT_AND_THROW( boost::format("wrong number of coeffs. expected %i got %i")%n_dof%coeffs.size());
+  }
+  
+  const char* all_fields[] = {"coeffs"};
+  ensure_only_members(params, all_fields, sizeof(all_fields)/sizeof(char*));
+}
+void JointAccCostInfo::hatch(TrajOptProb& prob) {
+  prob.addCost(CostPtr(new JointAccCost(prob.GetVars(), toVectorXd(coeffs))));
+  prob.getCosts().back()->setName(name);
+}
 
 void JointVelConstraintInfo::fromJson(const Value& v) {
   FAIL_IF_FALSE(v.isMember("params"));
@@ -467,7 +493,12 @@ void JointVelConstraintInfo::fromJson(const Value& v) {
   childFromJson(params, vals, "vals");
   childFromJson(params, first_step, "first_step", 0);
   childFromJson(params, last_step, "last_step", n_steps-1);
-  FAIL_IF_FALSE(vals.size() == n_dof);
+
+  if (vals.size() == 1) vals = DblVec(n_dof, vals[0]);
+  else if (vals.size() != n_dof) {
+    PRINT_AND_THROW( boost::format("wrong number of vals. expected %i got %i")%n_dof%vals.size());
+  }
+
   FAIL_IF_FALSE((first_step >= 0) && (first_step < n_steps));
   FAIL_IF_FALSE((last_step >= first_step) && (last_step < n_steps));
   
@@ -483,6 +514,7 @@ void JointVelConstraintInfo::hatch(TrajOptProb& prob) {
       prob.addLinearConstraint(-vel - vals[j], INEQ);
     }
   }
+  prob.addIneqConstraintEvaluation(ConstraintPtr(new JointVelConstraint(prob.GetVars(), vals)));
 }
 
 void CollisionCostInfo::fromJson(const Value& v) {

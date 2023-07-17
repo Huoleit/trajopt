@@ -191,6 +191,16 @@ void OptProb::addIneqConstraint(ConstraintPtr cnt) {
   assert (cnt->type() == INEQ);
   ineqcnts_.push_back(cnt);
 }
+
+void OptProb::addIneqConstraintEvaluation(ConstraintPtr cnt){
+  assert (cnt->type() == INEQ);
+  linearIneqcnts_.push_back(cnt);
+}
+
+vector<ConstraintPtr> OptProb::getLinearConstraints() const {
+  return linearIneqcnts_;
+}
+
 vector<ConstraintPtr> OptProb::getConstraints() const {
   vector<ConstraintPtr> out;
   out.reserve(eqcnts_.size() + ineqcnts_.size());

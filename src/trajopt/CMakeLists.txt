@@ -14,6 +14,7 @@ endif()
 add_library(trajopt
     traj_plotter.cpp
     trajectory_costs.cpp
+    trajectory_linear_constraints.cpp
     kinematic_terms.cpp 
     collision_terms.cpp
     json_marshal.cpp
