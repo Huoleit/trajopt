@@ -1,5 +1,8 @@
 #pragma once
 
+#include <algorithm>
+#include <cstring>
+
 template <class KeyT, class ValueT, unsigned bufsize>
 class Cache {
  public:

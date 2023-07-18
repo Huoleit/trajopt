@@ -13,3 +13,9 @@ target_link_libraries(robotui_expt ${OpenRAVE_BOTH_LIBRARIES} ${Boost_SYSTEM_LIB
 
 add_executable(test_osgviewer_text test_osgviewer_text.cpp)
 target_link_libraries(test_osgviewer_text osgviewer)
+
+add_executable(robot_animation robot_animation.cpp)
+target_link_libraries(robot_animation ${OSG_LIBRARIES})
+
+add_executable(viewer_animation viewer_animation.cpp)
+target_link_libraries(viewer_animation ${OpenRAVE_BOTH_LIBRARIES} ${Boost_SYSTEM_LIBRARY} osgviewer)

@@ -71,4 +71,16 @@ void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
   viewer->Idle();
 }
 
+void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x) {
+  OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
+
+  MatrixXd traj = getTraj(x, m_trajvars);
+  KinBodyPtr body = m_config->GetBodies().front();
+  vector<int> joint_inds = m_config->GetJointIndices();
+
+  viewer->AnimateKinBody(body, joint_inds, traj, 1.0);
+
+  viewer->Idle();
+}
+
 }  // namespace trajopt

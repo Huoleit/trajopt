@@ -11,6 +11,7 @@ class TRAJOPT_API Configuration {
   virtual void GetDOFLimits(DblVec& lower, DblVec& upper) const = 0;
   virtual DblVec GetDOFValues() = 0;
   virtual int GetDOF() const = 0;
+  virtual IntVec GetJointIndices() const = 0;
   virtual OpenRAVE::EnvironmentBasePtr GetEnv() = 0;
   virtual DblMatrix PositionJacobian(int link_ind, const OR::Vector& pt) const = 0;
   virtual DblMatrix RotationJacobian(int link_ind) const = 0;
@@ -49,7 +50,7 @@ class TRAJOPT_API RobotAndDOF : public Configuration {
   DblVec GetDOFValues();
   int GetDOF() const;
   virtual OpenRAVE::EnvironmentBasePtr GetEnv() { return robot->GetEnv(); };
-  IntVec GetJointIndices() const { return joint_inds; }
+  IntVec GetJointIndices() const override { return joint_inds; }
   DblMatrix PositionJacobian(int link_ind, const OR::Vector& pt) const;
   DblMatrix RotationJacobian(int link_ind) const;
   OR::RobotBasePtr GetRobot() const { return boost::dynamic_pointer_cast<RobotBase>(robot); }

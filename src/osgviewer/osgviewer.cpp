@@ -4,6 +4,7 @@
 #include <boost/foreach.hpp>
 #include <cstdio>
 #include <iostream>
+#include <osg/AnimationPath>
 #include <osg/Array>
 #include <osg/BlendFunc>
 #include <osg/CameraNode>
@@ -22,6 +23,7 @@
 #include <osgViewer/Viewer>
 
 #include "openrave_userdata_utils.hpp"
+#include "utils/eigen_conversions.hpp"
 #include "utils/logging.hpp"
 
 using namespace osg;
@@ -460,7 +462,7 @@ OSGViewer::OSGViewer(EnvironmentBasePtr env) : ViewerBase(env), m_idling(false) 
   m_root = new Group;
   //  m_viewer = new osgViewer::Viewer();
   m_viewer.setSceneData(m_root.get());
-  m_viewer.setUpViewInWindow(0, 0, 640, 480);
+  m_viewer.setUpViewInWindow(0, 0, 1920, 1080);
   m_viewer.realize();
   m_cam = m_viewer.getCamera();
   m_handler = new EventHandler;
@@ -476,7 +478,7 @@ OSGViewer::OSGViewer(EnvironmentBasePtr env) : ViewerBase(env), m_idling(false) 
   AddKeyCallback('s', boost::bind(&OSGViewer::TakeScreenshot, this), "Take screenshot");
   AddKeyCallback(osgGA::GUIEventAdapter::KEY_Escape, &throw_runtime_error, "Quit (raise exception)");
   PrintHelp();
-  m_viewer.setRunFrameScheme(osgViewer::ViewerBase::ON_DEMAND);
+  m_viewer.setRunFrameScheme(osgViewer::ViewerBase::CONTINUOUS);
 }
 
 int OSGViewer::main(bool bShow) {
@@ -701,6 +703,56 @@ GraphHandlePtr OSGViewer::PlotKinBody(KinBodyPtr body) {
       *orig, CopyOp(CopyOp::DEEP_COPY_NODES | CopyOp::DEEP_COPY_STATESETS | CopyOp::DEEP_COPY_STATEATTRIBUTES));
   OsgGraphHandle* handle = new OsgGraphHandle(copy, m_root.get());
   return GraphHandlePtr(handle);
+}
+
+void OSGViewer::AnimateKinBody(KinBodyPtr body, const vector<int>& joint_inds, const Eigen::MatrixXd& traj,
+                               const double dt) {
+  if (joint_inds.size() != traj.cols()) {
+    PRINT_AND_THROW("[AnimateKinBody] DOF mismatch. "
+                    << "Body: " << body->GetName() << " expects " << joint_inds.size() << " active DOFs, but traj has "
+                    << traj.cols());
+  }
+
+  UpdateSceneData();
+  KinBodyGroup* orig = GetOsgGroup(*body);
+  OPENRAVE_ASSERT_FORMAT0(orig != NULL, "kinbody not part of scene graph", ORE_Assert);
+
+  const vector<KinBody::LinkPtr>& links = body->GetLinks();
+  vector<osg::ref_ptr<osg::AnimationPath>> paths;
+  vector<int> affected_link_inds;
+  paths.reserve(links.size());
+  affected_link_inds.reserve(links.size());
+
+  int inds = 0;
+  for (const auto& link : links) {
+    if (link->GetGeometries().size() == 0) continue;
+
+    for (int i : joint_inds) {
+      if (body->DoesDOFAffectLink(i, link->GetIndex())) {
+        affected_link_inds.push_back(inds);
+        paths.push_back(new osg::AnimationPath);
+        paths.back()->setLoopMode(osg::AnimationPath::LOOP);
+        break;
+      }
+    }
+    ++inds;
+  }
+
+  for (unsigned int i = 0; i < traj.rows(); ++i) {
+    body->SetDOFValues(util::toDblVec(traj.row(i)), 1, joint_inds);
+    for (unsigned int j = 0; j < affected_link_inds.size(); ++j) {
+      const OpenRAVE::Transform& T = orig->links[affected_link_inds[j]]->GetTransform();
+      osg::Vec3 pos(T.trans.x, T.trans.y, T.trans.z);
+      osg::Vec4 rot(T.rot[1], T.rot[2], T.rot[3], T.rot[0]);
+      paths[j]->insert(dt * (double)i, osg::AnimationPath::ControlPoint(pos, rot));
+    }
+  }
+
+  for (unsigned int j = 0; j < affected_link_inds.size(); ++j) {
+    osg::ref_ptr<osg::AnimationPathCallback> apcb = new osg::AnimationPathCallback;
+    apcb->setAnimationPath(paths[j]);
+    orig->nodes[affected_link_inds[j]]->setUpdateCallback(apcb.get());
+  }
 }
 
 GraphHandlePtr OSGViewer::PlotLink(KinBody::LinkPtr link) {

@@ -17,6 +17,7 @@ struct TRAJOPT_API TrajPlotter {
   void Add(PlotterPtr plotter);
   void AddLink(OpenRAVE::KinBody::LinkPtr link);
   void OptimizerCallback(OptProb*, DblVec& x);
+  void OptimizerAnimationCallback(OptProb*, DblVec& x);
   void SetDecimation(int dec) { m_decimation = dec; }
 };
 typedef boost::shared_ptr<TrajPlotter> TrajPlotterPtr;

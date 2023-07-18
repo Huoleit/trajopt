@@ -13,6 +13,7 @@ include_directories(
   ${Boost_INCLUDE_DIRS}
   ${OpenRAVE_INCLUDE_DIRS}
   ${OSG_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIRS}
 )
 
 if (APPLE) 
