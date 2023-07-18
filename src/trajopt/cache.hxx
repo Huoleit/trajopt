@@ -1,14 +1,12 @@
 #pragma once
 
-template<class KeyT, class ValueT, unsigned bufsize>
+template <class KeyT, class ValueT, unsigned bufsize>
 class Cache {
-public:
-  KeyT keybuf[bufsize]; // circular buffer
-  ValueT valbuf[bufsize]; // circular buffer
+ public:
+  KeyT keybuf[bufsize];    // circular buffer
+  ValueT valbuf[bufsize];  // circular buffer
   int m_i;
-  Cache() : m_i(0) {
-    memset(keybuf, 666, sizeof(keybuf));
-  }
+  Cache() : m_i(0) { memset(keybuf, 666, sizeof(keybuf)); }
   void put(const KeyT& key, const ValueT& value) {
     keybuf[m_i] = key;
     valbuf[m_i] = value;
@@ -17,8 +15,6 @@ public:
   }
   ValueT* get(const KeyT& key) {
     KeyT* it = std::find(&keybuf[0], &keybuf[0] + bufsize, key);
-    return (it == &keybuf[0] + bufsize)
-        ? NULL
-        : &valbuf[it - &keybuf[0]];
+    return (it == &keybuf[0] + bufsize) ? NULL : &valbuf[it - &keybuf[0]];
   }
 };

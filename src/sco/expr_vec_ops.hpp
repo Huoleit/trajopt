@@ -1,5 +1,6 @@
-#include "solver_interface.hpp"
 #include <Eigen/Core>
+
+#include "solver_interface.hpp"
 
 namespace sco {
 
@@ -26,4 +27,4 @@ AffExpr exprDot(const VectorXd& x, const AffExprVector& v);
 QuadExpr varNorm2(const VarVector& v);
 QuadExpr exprNorm2(const ExprVector& v);
 #endif
-}
+}  // namespace sco

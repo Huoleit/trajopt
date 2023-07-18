@@ -1,14 +1,16 @@
 #include "mesh_simplification.hpp"
-#include <vtkSmartPointer.h>
+
+#include <pcl/PolygonMesh.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 #include <vtkCellArray.h>
 #include <vtkCellData.h>
 #include <vtkPoints.h>
-#include <vtkPolyLine.h>
 #include <vtkPolyData.h>
+#include <vtkPolyLine.h>
+#include <vtkSmartPointer.h>
+
 #include "cloudproc/vtkQuadricDecimation2.h"
-#include <pcl/PolygonMesh.h>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
 #include "macros.h"
 #if PCL_VERSION_COMPARE(>=, 1, 7, 0)
 #include <pcl/conversions.h>
@@ -20,7 +22,7 @@ using namespace pcl;
 namespace {
 void toPCL(vtkPolyData& in, pcl::PolygonMesh& out) {
   int nPts = in.GetNumberOfPoints();
-//  vtkPoints* points = in.GetPoints();
+  //  vtkPoints* points = in.GetPoints();
   pcl::PointCloud<PointXYZ> cloud;
   cloud.resize(nPts);
   for (int i = 0; i < nPts; ++i) {
@@ -33,12 +35,12 @@ void toPCL(vtkPolyData& in, pcl::PolygonMesh& out) {
   int nPolygons = in.GetNumberOfCells();
   out.polygons.resize(nPolygons);
   for (int i = 0; i < nPolygons; ++i) {
-//    vtkIdType idxdata[3];
-//    unsigned short nPolyPts;
-//    in.GetPointCells(i, nPolyPts, idxdata);
+    //    vtkIdType idxdata[3];
+    //    unsigned short nPolyPts;
+    //    in.GetPointCells(i, nPolyPts, idxdata);
 
-    vtkIdType numIds; // to hold the size of the cell
-    vtkIdType *idxdata; // to hold the ids in the cell
+    vtkIdType numIds;    // to hold the size of the cell
+    vtkIdType* idxdata;  // to hold the ids in the cell
     in.GetCellPoints(i, numIds, idxdata);
 
     std::vector<uint32_t>& vertices = out.polygons[i].vertices;
@@ -52,7 +54,6 @@ void toPCL(vtkPolyData& in, pcl::PolygonMesh& out) {
 #else
   pcl::toROSMsg(cloud, out.cloud);
 #endif
-
 }
 void toVTK(pcl::PolygonMesh& in, vtkPolyData& out) {
   pcl::PointCloud<pcl::PointXYZ> cloud;
@@ -63,32 +64,27 @@ void toVTK(pcl::PolygonMesh& in, vtkPolyData& out) {
 #endif
 
   vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
-  BOOST_FOREACH(const PointXYZ& pt, cloud.points) {
-    points->InsertNextPoint((float*) &pt);
-  }
+  BOOST_FOREACH (const PointXYZ& pt, cloud.points) { points->InsertNextPoint((float*)&pt); }
   vtkSmartPointer<vtkCellArray> cells = vtkSmartPointer<vtkCellArray>::New();
-  BOOST_FOREACH(const pcl::Vertices& verts, in.polygons) {
+  BOOST_FOREACH (const pcl::Vertices& verts, in.polygons) {
     assert(verts.vertices.size() == 3);
-    long long inds[3] = { verts.vertices[0], verts.vertices[1],
-        verts.vertices[2] };
+    long long inds[3] = {verts.vertices[0], verts.vertices[1], verts.vertices[2]};
     cells->InsertNextCell(3, inds);
   }
   out.SetPoints(points);
   out.SetPolys(cells);
 }
-}
+}  // namespace
 
 namespace cloudproc {
 pcl::PolygonMesh::Ptr quadricSimplifyVTK(pcl::PolygonMesh& in, float meshDecimationFrac) {
   if (meshDecimationFrac < 0 || meshDecimationFrac > 1) PRINT_AND_THROW("expected 0 <= meshDecimationFrac <= 1");
 
-  vtkSmartPointer<vtkPolyData> inputPolyData =
-      vtkSmartPointer<vtkPolyData>::New();
+  vtkSmartPointer<vtkPolyData> inputPolyData = vtkSmartPointer<vtkPolyData>::New();
   toVTK(in, *inputPolyData);
 
-  vtkSmartPointer<vtkQuadricDecimation2> decimate = vtkSmartPointer<
-      vtkQuadricDecimation2>::New();
-  decimate->SetTargetReduction(1-meshDecimationFrac);
+  vtkSmartPointer<vtkQuadricDecimation2> decimate = vtkSmartPointer<vtkQuadricDecimation2>::New();
+  decimate->SetTargetReduction(1 - meshDecimationFrac);
   decimate->SetInput(inputPolyData.GetPointer());
   decimate->Update();
 
@@ -99,4 +95,4 @@ pcl::PolygonMesh::Ptr quadricSimplifyVTK(pcl::PolygonMesh& in, float meshDecimat
   toPCL(*decimated, *out);
   return out;
 }
-}
+}  // namespace cloudproc

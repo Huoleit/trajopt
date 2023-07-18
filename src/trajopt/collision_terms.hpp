@@ -1,15 +1,13 @@
 #pragma once
-#include "trajopt/common.hpp"
-#include "trajopt/collision_checker.hpp"
+#include "cache.hxx"
 #include "sco/modeling.hpp"
 #include "sco/sco_fwd.hpp"
-#include "cache.hxx"
-
+#include "trajopt/collision_checker.hpp"
+#include "trajopt/common.hpp"
 
 namespace trajopt {
 
 typedef std::map<const OR::KinBody::Link*, int> Link2Int;
-
 
 struct CollisionEvaluator {
   virtual void CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) = 0;
@@ -17,18 +15,18 @@ struct CollisionEvaluator {
   virtual void CalcCollisions(const DblVec& x, vector<Collision>& collisions) = 0;
   void GetCollisionsCached(const DblVec& x, vector<Collision>&);
   virtual ~CollisionEvaluator() {}
-  virtual VarVector GetVars()=0;
+  virtual VarVector GetVars() = 0;
 
   Cache<size_t, vector<Collision>, 3> m_cache;
 };
 typedef boost::shared_ptr<CollisionEvaluator> CollisionEvaluatorPtr;
 
 struct SingleTimestepCollisionEvaluator : public CollisionEvaluator {
-public:
+ public:
   SingleTimestepCollisionEvaluator(ConfigurationPtr rad, const VarVector& vars);
   /**
   @brief linearize all contact distances in terms of robot dofs
-  
+
   Do a collision check between robot and environment.
   For each contact generated, return a linearization of the signed distance function
   */
@@ -38,7 +36,7 @@ public:
    */
   void CalcDists(const DblVec& x, DblVec& exprs);
   void CalcCollisions(const DblVec& x, vector<Collision>& collisions);
-  VarVector GetVars() {return m_vars;}
+  VarVector GetVars() { return m_vars; }
 
   OR::EnvironmentBasePtr m_env;
   CollisionCheckerPtr m_cc;
@@ -50,13 +48,12 @@ public:
 };
 
 struct CastCollisionEvaluator : public CollisionEvaluator {
-public:
+ public:
   CastCollisionEvaluator(ConfigurationPtr rad, const VarVector& vars0, const VarVector& vars1);
   void CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs);
   void CalcDists(const DblVec& x, DblVec& exprs);
   void CalcCollisions(const DblVec& x, vector<Collision>& collisions);
-  VarVector GetVars() {return concat(m_vars0, m_vars1);}
-  
+  VarVector GetVars() { return concat(m_vars0, m_vars1); }
 
   // parameters:
   OR::EnvironmentBasePtr m_env;
@@ -68,12 +65,10 @@ public:
   Link2Int m_link2ind;
   vector<OR::KinBody::LinkPtr> m_links;
   short m_filterMask;
-
 };
 
-
 class TRAJOPT_API CollisionCost : public Cost, public Plotter {
-public:
+ public:
   /* constructor for single timestep */
   CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars);
   /* constructor for cast cost */
@@ -81,26 +76,29 @@ public:
   virtual ConvexObjectivePtr convex(const vector<double>& x, Model* model);
   virtual double value(const vector<double>&);
   void Plot(const DblVec& x, OR::EnvironmentBase& env, std::vector<OR::GraphHandlePtr>& handles);
-  VarVector getVars() {return m_calc->GetVars();}
-private:
+  VarVector getVars() { return m_calc->GetVars(); }
+
+ private:
   CollisionEvaluatorPtr m_calc;
   double m_dist_pen;
   double m_coeff;
 };
 class TRAJOPT_API CollisionConstraint : public IneqConstraint {
-public:
+ public:
   /* constructor for single timestep */
   CollisionConstraint(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars);
   /* constructor for cast cost */
-  CollisionConstraint(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars0, const VarVector& vars1);
+  CollisionConstraint(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars0,
+                      const VarVector& vars1);
   virtual ConvexConstraintsPtr convex(const vector<double>& x, Model* model);
   virtual DblVec value(const vector<double>&);
   void Plot(const DblVec& x, OR::EnvironmentBase& env, std::vector<OR::GraphHandlePtr>& handles);
-  VarVector getVars() {return m_calc->GetVars();}
-private:
+  VarVector getVars() { return m_calc->GetVars(); }
+
+ private:
   CollisionEvaluatorPtr m_calc;
   double m_dist_pen;
   double m_coeff;
 };
 
-}
+}  // namespace trajopt

@@ -1,5 +1,6 @@
 #pragma once
 #include <Eigen/Core>
+
 #include "macros.h"
 
 Eigen::MatrixX2d hull2d(const Eigen::MatrixX2d&);

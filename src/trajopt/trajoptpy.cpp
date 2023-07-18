@@ -1,11 +1,12 @@
+#include <boost/foreach.hpp>
 #include <boost/python.hpp>
+
+#include "macros.h"
+#include "numpy_utils.hpp"
+#include "osgviewer/osgviewer.hpp"
+#include "sco/modeling_utils.hpp"
 #include "trajopt/collision_checker.hpp"
 #include "trajopt/problem_description.hpp"
-#include "osgviewer/osgviewer.hpp"
-#include <boost/foreach.hpp>
-#include "macros.h"
-#include "sco/modeling_utils.hpp"
-#include "numpy_utils.hpp"
 using namespace trajopt;
 using namespace Eigen;
 using namespace OpenRAVE;
@@ -15,8 +16,6 @@ namespace py = boost::python;
 
 bool gInteractive = false;
 py::object openravepy;
-
-
 
 EnvironmentBasePtr GetCppEnv(py::object py_env) {
   py::object openravepy = py::import("openravepy");
@@ -34,11 +33,8 @@ KinBody::LinkPtr GetCppLink(py::object py_link, EnvironmentBasePtr env) {
   return parent->GetLinks()[idx];
 }
 
-
-
-
 class PyTrajOptProb {
-public:
+ public:
   TrajOptProbPtr m_prob;
   PyTrajOptProb(TrajOptProbPtr prob) : m_prob(prob) {}
   py::list GetDOFIndices() {
@@ -79,45 +75,57 @@ struct MatrixFuncFromPy : public MatrixOfVector {
   py::object m_pyfunc;
   MatrixFuncFromPy(py::object pyfunc) : m_pyfunc(pyfunc) {}
   MatrixXd operator()(const VectorXd& x) const {
-    py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())),"float64");
+    py::object outarr = np_mod.attr("array")(m_pyfunc(toNdarray1<double>(x.data(), x.size())), "float64");
     py::object shape = outarr.attr("shape");
-    MatrixXd out = Map<const MatrixXd>(getPointer<double>(outarr), py::extract<int>(shape[0]), py::extract<int>(shape[1]));
+    MatrixXd out =
+        Map<const MatrixXd>(getPointer<double>(outarr), py::extract<int>(shape[0]), py::extract<int>(shape[1]));
     return out;
   }
 };
 
 ConstraintType _GetConstraintType(const string& typestr) {
-  if (typestr == "EQ") return EQ;
-  else if (typestr == "INEQ") return INEQ;
-  else PRINT_AND_THROW("type must be \"EQ\" or \"INEQ\"");  
+  if (typestr == "EQ")
+    return EQ;
+  else if (typestr == "INEQ")
+    return INEQ;
+  else
+    PRINT_AND_THROW("type must be \"EQ\" or \"INEQ\"");
 }
 PenaltyType _GetPenaltyType(const string& typestr) {
-  if (typestr == "SQUARED") return SQUARED;
-  else if (typestr == "ABS") return ABS;
-  else if (typestr == "HINGE") return HINGE;
-  else PRINT_AND_THROW("type must be \"SQUARED\" or \"ABS\" or \"HINGE\"r");  
+  if (typestr == "SQUARED")
+    return SQUARED;
+  else if (typestr == "ABS")
+    return ABS;
+  else if (typestr == "HINGE")
+    return HINGE;
+  else
+    PRINT_AND_THROW("type must be \"SQUARED\" or \"ABS\" or \"HINGE\"r");
 }
 VarVector _GetVars(py::list ijs, const VarArray& vars) {
   VarVector out;
   int n = py::len(ijs);
-  for (int k=0; k < n; ++k) {
+  for (int k = 0; k < n; ++k) {
     int i = py::extract<int>(ijs[k][0]);
     int j = py::extract<int>(ijs[k][1]);
-    out.push_back(vars(i,j));
-  }  
+    out.push_back(vars(i, j));
+  }
   return out;
 }
 
-void PyTrajOptProb::AddConstraint1(py::object f, py::list ijs, const string& typestr, const string& name) {  
+void PyTrajOptProb::AddConstraint1(py::object f, py::list ijs, const string& typestr, const string& name) {
   ConstraintType type = _GetConstraintType(typestr);
   VarVector vars = _GetVars(ijs, m_prob->GetVars());
-  ConstraintPtr c(new ConstraintFromFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)), vars, VectorXd::Ones(0), type, name));
+  ConstraintPtr c(
+      new ConstraintFromFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)), vars, VectorXd::Ones(0), type, name));
   m_prob->addConstraint(c);
 }
-void PyTrajOptProb::AddConstraint2(py::object f, py::object dfdx, py::list ijs, const string& typestr, const string& name) {
+void PyTrajOptProb::AddConstraint2(py::object f, py::object dfdx, py::list ijs, const string& typestr,
+                                   const string& name) {
   ConstraintType type = _GetConstraintType(typestr);
   VarVector vars = _GetVars(ijs, m_prob->GetVars());
-  ConstraintPtr c(new ConstraintFromFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)), MatrixOfVectorPtr(new MatrixFuncFromPy(dfdx)), vars, VectorXd::Ones(0), type, name));
+  ConstraintPtr c(new ConstraintFromFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)),
+                                         MatrixOfVectorPtr(new MatrixFuncFromPy(dfdx)), vars, VectorXd::Ones(0), type,
+                                         name));
   m_prob->addConstraint(c);
 }
 void PyTrajOptProb::AddCost1(py::object f, py::list ijs, const string& name) {
@@ -131,13 +139,14 @@ void PyTrajOptProb::AddErrCost1(py::object f, py::list ijs, const string& typest
   CostPtr c(new CostFromErrFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)), vars, VectorXd(), type, name));
   m_prob->addCost(c);
 }
-void PyTrajOptProb::AddErrCost2(py::object f, py::object dfdx, py::list ijs, const string& typestr, const string& name) {
+void PyTrajOptProb::AddErrCost2(py::object f, py::object dfdx, py::list ijs, const string& typestr,
+                                const string& name) {
   PenaltyType type = _GetPenaltyType(typestr);
   VarVector vars = _GetVars(ijs, m_prob->GetVars());
-  CostPtr c(new CostFromErrFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)), MatrixOfVectorPtr(new MatrixFuncFromPy(dfdx)), vars, VectorXd(), type, name));
+  CostPtr c(new CostFromErrFunc(VectorOfVectorPtr(new VectorFuncFromPy(f)),
+                                MatrixOfVectorPtr(new MatrixFuncFromPy(dfdx)), vars, VectorXd(), type, name));
   m_prob->addCost(c);
 }
-
 
 Json::Value readJsonFile(const std::string& doc) {
   Json::Value root;
@@ -159,13 +168,13 @@ void SetInteractive(py::object b) {
 }
 
 class PyTrajOptResult {
-public:
+ public:
   PyTrajOptResult(TrajOptResultPtr result) : m_result(result) {}
   TrajOptResultPtr m_result;
   py::object GetCosts() {
     py::list out;
     int n_costs = m_result->cost_names.size();
-    for (int i=0; i < n_costs; ++i) {
+    for (int i = 0; i < n_costs; ++i) {
       out.append(py::make_tuple(m_result->cost_names[i], m_result->cost_vals[i]));
     }
     return out;
@@ -173,13 +182,13 @@ public:
   py::object GetConstraints() {
     py::list out;
     int n_cnts = m_result->cnt_names.size();
-    for (int i=0; i < n_cnts; ++i) {
+    for (int i = 0; i < n_cnts; ++i) {
       out.append(py::make_tuple(m_result->cnt_names[i], m_result->cnt_viols[i]));
     }
     return out;
   }
   py::object GetTraj() {
-    TrajArray &traj = m_result->traj;
+    TrajArray& traj = m_result->traj;
     py::object out = np_mod.attr("empty")(py::make_tuple(traj.rows(), traj.cols()));
     for (int i = 0; i < traj.rows(); ++i) {
       for (int j = 0; j < traj.cols(); ++j) {
@@ -188,45 +197,39 @@ public:
     }
     return out;
   }
-  py::object __str__() {
-    return GetCosts().attr("__str__")() + GetConstraints().attr("__str__")();
-  }
+  py::object __str__() { return GetCosts().attr("__str__")() + GetConstraints().attr("__str__")(); }
 };
 
 PyTrajOptResult PyOptimizeProblem(PyTrajOptProb& prob) {
   return OptimizeProblem(prob.m_prob, gInteractive);
 }
 
-
 class PyCollision {
-public:
+ public:
   Collision m_c;
   PyCollision(const Collision& c) : m_c(c) {}
-  float GetDistance() {return m_c.distance;}
+  float GetDistance() { return m_c.distance; }
 };
 
 py::list toPyList(const vector<Collision>& collisions) {
   py::list out;
-  BOOST_FOREACH(const Collision& c, collisions) {
-    out.append(PyCollision(c));
-  }
+  BOOST_FOREACH (const Collision& c, collisions) { out.append(PyCollision(c)); }
   return out;
 }
 
 class PyGraphHandle {
   vector<GraphHandlePtr> m_handles;
-public:
+
+ public:
   PyGraphHandle(const vector<GraphHandlePtr>& handles) : m_handles(handles) {}
   PyGraphHandle(GraphHandlePtr handle) : m_handles(1, handle) {}
   void SetTransparency1(float alpha) {
-    BOOST_FOREACH(GraphHandlePtr& handle, m_handles) {
-      SetTransparency(handle, alpha);
-    }
+    BOOST_FOREACH (GraphHandlePtr& handle, m_handles) { SetTransparency(handle, alpha); }
   }
 };
 
 class PyCollisionChecker {
-public:
+ public:
   py::object AllVsAll() {
     vector<Collision> collisions;
     m_cc->AllVsAll(collisions);
@@ -234,7 +237,7 @@ public:
   }
   py::object BodyVsAll(py::object py_kb) {
     KinBodyPtr cpp_kb = boost::const_pointer_cast<EnvironmentBase>(m_cc->GetEnv())
-        ->GetBodyFromEnvironmentId(py::extract<int>(py_kb.attr("GetEnvironmentId")()));
+                            ->GetBodyFromEnvironmentId(py::extract<int>(py_kb.attr("GetEnvironmentId")()));
     if (!cpp_kb) {
       throw openrave_exception("body isn't part of environment!");
     }
@@ -256,12 +259,11 @@ public:
     m_cc->IncludeCollisionPair(*GetCppLink(link0, env), *GetCppLink(link1, env));
   }
   PyCollisionChecker(CollisionCheckerPtr cc) : m_cc(cc) {}
-private:
+
+ private:
   PyCollisionChecker();
   CollisionCheckerPtr m_cc;
 };
-
-
 
 PyCollisionChecker PyGetCollisionChecker(py::object py_env) {
   CollisionCheckerPtr cc = CollisionChecker::GetOrCreate(*GetCppEnv(py_env));
@@ -269,16 +271,14 @@ PyCollisionChecker PyGetCollisionChecker(py::object py_env) {
 }
 
 class PyOSGViewer {
-public:
-    PyOSGViewer(OSGViewerPtr viewer) : m_viewer(viewer) {}
+ public:
+  PyOSGViewer(OSGViewerPtr viewer) : m_viewer(viewer) {}
   int Step() {
     m_viewer->UpdateSceneData();
     m_viewer->Draw();
     return 0;
   }
-  void UpdateSceneData() {
-    m_viewer->UpdateSceneData();
-  }
+  void UpdateSceneData() { m_viewer->UpdateSceneData(); }
   PyGraphHandle PlotKinBody(py::object py_kb) {
     return PyGraphHandle(m_viewer->PlotKinBody(GetCppKinBody(py_kb, m_viewer->GetEnv())));
   }
@@ -288,19 +288,18 @@ public:
   void SetTransparency(py::object py_kb, float alpha) {
     m_viewer->SetTransparency(GetCppKinBody(py_kb, m_viewer->GetEnv()), alpha);
   }
-  void SetAllTransparency(float a) {
-    m_viewer->SetAllTransparency(a);
-  }
+  void SetAllTransparency(float a) { m_viewer->SetAllTransparency(a); }
   void Idle() {
     assert(!!m_viewer);
     m_viewer->Idle();
   }
-PyGraphHandle DrawText(std::string text, float x, float y, float fontsize, py::object pycolor) {
-    OpenRAVE::Vector color = OpenRAVE::Vector(py::extract<float>(pycolor[0]), py::extract<float>(pycolor[1]), py::extract<float>(pycolor[2]), py::extract<float>(pycolor[3]));
+  PyGraphHandle DrawText(std::string text, float x, float y, float fontsize, py::object pycolor) {
+    OpenRAVE::Vector color = OpenRAVE::Vector(py::extract<float>(pycolor[0]), py::extract<float>(pycolor[1]),
+                                              py::extract<float>(pycolor[2]), py::extract<float>(pycolor[3]));
     return PyGraphHandle(m_viewer->drawtext(text, x, y, fontsize, color));
   }
-  
-private:
+
+ private:
   OSGViewerPtr m_viewer;
   PyOSGViewer() {}
 };
@@ -311,9 +310,7 @@ PyOSGViewer PyGetViewer(py::object py_env) {
   return PyOSGViewer(viewer);
 }
 
-
 BOOST_PYTHON_MODULE(ctrajoptpy) {
-
   np_mod = py::import("numpy");
 
   py::object openravepy = py::import("openravepy");
@@ -325,13 +322,23 @@ BOOST_PYTHON_MODULE(ctrajoptpy) {
 
   py::class_<PyTrajOptProb>("TrajOptProb", py::no_init)
       .def("GetDOFIndices", &PyTrajOptProb::GetDOFIndices)
-      .def("SetRobotActiveDOFs", &PyTrajOptProb::SetRobotActiveDOFs, "Sets the active DOFs of the robot to the DOFs in the optimization problem")
-      .def("AddConstraint", &PyTrajOptProb::AddConstraint1, "Add constraint from python function (using numerical differentiation)", (py::arg("f"),"var_ijs","constraint_type","name"))
-      .def("AddConstraint", &PyTrajOptProb::AddConstraint2, "Add constraint from python error function and analytic derivative", (py::arg("f"),"dfdx","var_ijs","constraint_type","name"))
-      .def("AddCost", &PyTrajOptProb::AddCost1, "Add cost from python scalar-valued function (using numerical differentiation)", (py::arg("func"),"var_ijs", "name"))
-      .def("AddErrorCost", &PyTrajOptProb::AddErrCost1, "Add error cost from python vector-valued error function (using numerical differentiation)", (py::arg("f"),"var_ijs","penalty_type","name"))
-      .def("AddErrorCost", &PyTrajOptProb::AddErrCost2, "Add error cost from python vector-valued error function and analytic derivative",(py::arg("f"),"dfdx","var_ijs","penalty_type","name"))
-  ;
+      .def("SetRobotActiveDOFs", &PyTrajOptProb::SetRobotActiveDOFs,
+           "Sets the active DOFs of the robot to the DOFs in the optimization problem")
+      .def("AddConstraint", &PyTrajOptProb::AddConstraint1,
+           "Add constraint from python function (using numerical differentiation)",
+           (py::arg("f"), "var_ijs", "constraint_type", "name"))
+      .def("AddConstraint", &PyTrajOptProb::AddConstraint2,
+           "Add constraint from python error function and analytic derivative",
+           (py::arg("f"), "dfdx", "var_ijs", "constraint_type", "name"))
+      .def("AddCost", &PyTrajOptProb::AddCost1,
+           "Add cost from python scalar-valued function (using numerical differentiation)",
+           (py::arg("func"), "var_ijs", "name"))
+      .def("AddErrorCost", &PyTrajOptProb::AddErrCost1,
+           "Add error cost from python vector-valued error function (using numerical differentiation)",
+           (py::arg("f"), "var_ijs", "penalty_type", "name"))
+      .def("AddErrorCost", &PyTrajOptProb::AddErrCost2,
+           "Add error cost from python vector-valued error function and analytic derivative",
+           (py::arg("f"), "dfdx", "var_ijs", "penalty_type", "name"));
   py::def("SetInteractive", &SetInteractive, "if True, pause and plot every iteration");
   py::def("ConstructProblem", &PyConstructProblem, "create problem from JSON string");
   py::def("OptimizeProblem", &PyOptimizeProblem);
@@ -340,34 +347,26 @@ BOOST_PYTHON_MODULE(ctrajoptpy) {
       .def("GetCosts", &PyTrajOptResult::GetCosts)
       .def("GetConstraints", &PyTrajOptResult::GetConstraints)
       .def("GetTraj", &PyTrajOptResult::GetTraj)
-      .def("__str__", &PyTrajOptResult::__str__)
-      ;
+      .def("__str__", &PyTrajOptResult::__str__);
 
   py::class_<PyCollisionChecker>("CollisionChecker", py::no_init)
       .def("AllVsAll", &PyCollisionChecker::AllVsAll)
       .def("BodyVsAll", &PyCollisionChecker::BodyVsAll)
       .def("PlotCollisionGeometry", &PyCollisionChecker::PlotCollisionGeometry)
       .def("ExcludeCollisionPair", &PyCollisionChecker::ExcludeCollisionPair)
-      .def("IncludeCollisionPair", &PyCollisionChecker::IncludeCollisionPair)
-      ;
+      .def("IncludeCollisionPair", &PyCollisionChecker::IncludeCollisionPair);
   py::def("GetCollisionChecker", &PyGetCollisionChecker);
-  py::class_<PyCollision>("Collision", py::no_init)
-     .def("GetDistance", &PyCollision::GetDistance)
-    ;
-  py::class_< PyGraphHandle >("GraphHandle", py::no_init)
-     .def("SetTransparency", &PyGraphHandle::SetTransparency1)
-     ;
+  py::class_<PyCollision>("Collision", py::no_init).def("GetDistance", &PyCollision::GetDistance);
+  py::class_<PyGraphHandle>("GraphHandle", py::no_init).def("SetTransparency", &PyGraphHandle::SetTransparency1);
 
-  py::class_< PyOSGViewer >("OSGViewer", py::no_init)
-     .def("UpdateSceneData", &PyOSGViewer::UpdateSceneData)
-     .def("Step", &PyOSGViewer::Step)
-     .def("PlotKinBody", &PyOSGViewer::PlotKinBody)
-     .def("PlotLink", &PyOSGViewer::PlotLink)
-     .def("SetTransparency", &PyOSGViewer::SetTransparency)
-     .def("SetAllTransparency", &PyOSGViewer::SetAllTransparency)
-     .def("Idle", &PyOSGViewer::Idle)
-     .def("DrawText", &PyOSGViewer::DrawText)
-    ;
+  py::class_<PyOSGViewer>("OSGViewer", py::no_init)
+      .def("UpdateSceneData", &PyOSGViewer::UpdateSceneData)
+      .def("Step", &PyOSGViewer::Step)
+      .def("PlotKinBody", &PyOSGViewer::PlotKinBody)
+      .def("PlotLink", &PyOSGViewer::PlotLink)
+      .def("SetTransparency", &PyOSGViewer::SetTransparency)
+      .def("SetAllTransparency", &PyOSGViewer::SetAllTransparency)
+      .def("Idle", &PyOSGViewer::Idle)
+      .def("DrawText", &PyOSGViewer::DrawText);
   py::def("GetViewer", &PyGetViewer, "Get OSG viewer for environment or create a new one");
-
 }

@@ -1,8 +1,10 @@
+#include <openrave-core.h>
+
+#include <cmath>
+
 #include "osgviewer/osgviewer.hpp"
 #include "osgviewer/robot_ui.hpp"
-#include <openrave-core.h>
 #include "trajopt/collision_checker.hpp"
-#include <cmath>
 using namespace OpenRAVE;
 using namespace std;
 using namespace trajopt;
@@ -11,9 +13,8 @@ CollisionCheckerPtr cc;
 vector<GraphHandlePtr> handles;
 EnvironmentBasePtr env;
 OSGViewerPtr viewer;
-void PlotCollisionGeometry(const osgGA::GUIEventAdapter & ea) {
+void PlotCollisionGeometry(const osgGA::GUIEventAdapter& ea) {
   if (handles.size() == 0) {
-
     cc->PlotCollisionGeometry(handles);
     vector<Collision> collisions;
     cc->AllVsAll(collisions);
@@ -36,7 +37,7 @@ int main() {
   RaveInitialize(false, OpenRAVE::Level_Debug);
   env = RaveCreateEnvironment();
   env->StopSimulation();
-//  bool success = env->Load("data/pr2test2.env.xml");
+  //  bool success = env->Load("data/pr2test2.env.xml");
   {
     bool success = env->Load("/home/joschu/Proj/drc/gfe.xml");
     FAIL_IF_FALSE(success);
@@ -50,14 +51,11 @@ int main() {
   RobotBasePtr robot = robots[0];
   vector<RobotBase::ManipulatorPtr> manips = robot->GetManipulators();
 
-
   cc = CollisionChecker::GetOrCreate(*env);
   viewer.reset(new OSGViewer(env));
   env->AddViewer(viewer);
 
-
-
-  ManipulatorControl mc(manips[manips.size()-1], viewer);
+  ManipulatorControl mc(manips[manips.size() - 1], viewer);
   DriveControl dc(robot, viewer);
   StatePrinter sp(robot);
   viewer->AddKeyCallback('a', boost::bind(&StatePrinter::PrintAll, &sp));
@@ -70,5 +68,4 @@ int main() {
   env.reset();
   viewer.reset();
   RaveDestroy();
-
 }

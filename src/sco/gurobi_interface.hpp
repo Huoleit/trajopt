@@ -14,7 +14,7 @@ typedef struct _GRBmodel GRBmodel;
 namespace sco {
 
 class GurobiModel : public Model {
-public:
+ public:
   GRBmodel* m_model;
   vector<Var> m_vars;
   vector<Cnt> m_cnts;
@@ -46,9 +46,6 @@ public:
   VarVector getVars() const;
 
   ~GurobiModel();
-
 };
 
-
-}
-
+}  // namespace sco

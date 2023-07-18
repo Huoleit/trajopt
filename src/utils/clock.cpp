@@ -1,7 +1,7 @@
 #include "clock.hpp"
+
 #include <sys/time.h>
 #include <time.h>
-
 
 namespace util {
 
@@ -16,21 +16,21 @@ static long unsigned int startTime = 0;
  */
 // time in units of seconds since some time in the past
 void StartClock() {
-    //determine start time
-    struct timeval startTimeStruct;
+  // determine start time
+  struct timeval startTimeStruct;
   gettimeofday(&startTimeStruct, NULL);
-  startTime = startTimeStruct.tv_sec*(long unsigned int)(1e6) + startTimeStruct.tv_usec;
+  startTime = startTimeStruct.tv_sec * (long unsigned int)(1e6) + startTimeStruct.tv_usec;
 }
 
 /*
  * Returns the current time since the call to StartClock();
  */
 double GetClock() {
-    struct timeval startTimeStruct; unsigned long int curTime;
-    gettimeofday(&startTimeStruct, NULL);
-    curTime = startTimeStruct.tv_sec*(long unsigned int)(1e6) + startTimeStruct.tv_usec;
-    return (1e-6) * (curTime - startTime);
+  struct timeval startTimeStruct;
+  unsigned long int curTime;
+  gettimeofday(&startTimeStruct, NULL);
+  curTime = startTimeStruct.tv_sec * (long unsigned int)(1e6) + startTimeStruct.tv_usec;
+  return (1e-6) * (curTime - startTime);
 }
 
-
-}
+}  // namespace util

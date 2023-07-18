@@ -1,16 +1,15 @@
-#include "json_serializer.h"
 #include <iostream>
+
+#include "json_serializer.h"
 using namespace std;
 /**
  * Additional semantics: default values
  */
 class Poop {
-public:
+ public:
   int x;
   float y;
-  enum Color {
-    red, green, pink
-  };
+  enum Color { red, green, pink };
   Color col;
   Poop() {}
   Poop(int _x, float _y, Color _col) : x(_x), y(_y), col(_col) {}
@@ -23,9 +22,10 @@ public:
 
 int main(int argc, char* argv[]) {
   JsonSerializer s(true);
-  Poop p(1,2,Poop::red);
+  Poop p(1, 2, Poop::red);
   p.Serialize(s);
-  cout << s.JsonValue << endl;;
+  cout << s.JsonValue << endl;
+  ;
 
   Json::Value v;
   v["x"] = 3;
@@ -35,5 +35,4 @@ int main(int argc, char* argv[]) {
   Poop p1;
   p1.Serialize(s1);
   cout << p1.x << " " << p1.y << " " << p1.col << endl;
-
 }

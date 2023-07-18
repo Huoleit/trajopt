@@ -1,11 +1,13 @@
 #pragma once
 
+#include <openrave/openrave.h>
+
+#include <Eigen/Core>
+
 #include "sco/modeling.hpp"
 #include "sco/modeling_utils.hpp"
 #include "sco/sco_fwd.hpp"
-#include <Eigen/Core>
 #include "trajopt/common.hpp"
-#include <openrave/openrave.h>
 namespace trajopt {
 
 using namespace sco;
@@ -27,32 +29,28 @@ public:
 };
 #endif
 
-
 struct CartPoseErrCalculator : public VectorOfVector {
   OR::Transform pose_inv_;
   ConfigurationPtr manip_;
   OR::KinBody::LinkPtr link_;
-  CartPoseErrCalculator(const OR::Transform& pose, ConfigurationPtr manip, OR::KinBody::LinkPtr link) :
-    pose_inv_(pose.inverse()),
-    manip_(manip),
-    link_(link) {}
+  CartPoseErrCalculator(const OR::Transform& pose, ConfigurationPtr manip, OR::KinBody::LinkPtr link)
+      : pose_inv_(pose.inverse()), manip_(manip), link_(link) {}
   VectorXd operator()(const VectorXd& dof_vals) const;
 };
 
 struct CartPoseErrorPlotter : public Plotter {
-  boost::shared_ptr<void> m_calc; //actually points to a CartPoseErrCalculator = CartPoseCost::f_
+  boost::shared_ptr<void> m_calc;  // actually points to a CartPoseErrCalculator = CartPoseCost::f_
   VarVector m_vars;
   CartPoseErrorPlotter(boost::shared_ptr<void> calc, const VarVector& vars) : m_calc(calc), m_vars(vars) {}
   void Plot(const DblVec& x, OR::EnvironmentBase& env, std::vector<OR::GraphHandlePtr>& handles);
 };
 
-
 struct CartVelJacCalculator : MatrixOfVector {
   ConfigurationPtr manip_;
   KinBody::LinkPtr link_;
   double limit_;
-  CartVelJacCalculator(ConfigurationPtr manip, KinBody::LinkPtr link, double limit) :
-    manip_(manip), link_(link), limit_(limit) {}
+  CartVelJacCalculator(ConfigurationPtr manip, KinBody::LinkPtr link, double limit)
+      : manip_(manip), link_(link), limit_(limit) {}
 
   MatrixXd operator()(const VectorXd& dof_vals) const;
 };
@@ -61,8 +59,8 @@ struct CartVelCalculator : VectorOfVector {
   ConfigurationPtr manip_;
   KinBody::LinkPtr link_;
   double limit_;
-  CartVelCalculator(ConfigurationPtr manip, KinBody::LinkPtr link, double limit) :
-    manip_(manip), link_(link), limit_(limit) {}
+  CartVelCalculator(ConfigurationPtr manip, KinBody::LinkPtr link, double limit)
+      : manip_(manip), link_(link), limit_(limit) {}
 
   VectorXd operator()(const VectorXd& dof_vals) const;
 };
@@ -84,6 +82,4 @@ public:
 };
 #endif
 
-
-
-}
+}  // namespace trajopt

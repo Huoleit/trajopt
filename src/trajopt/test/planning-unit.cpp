@@ -1,20 +1,22 @@
 #include <gtest/gtest.h>
 #include <openrave-core.h>
 #include <openrave/openrave.h>
+
+#include <boost/assign.hpp>
+#include <boost/foreach.hpp>
+#include <ctime>
+
+#include "osgviewer/osgviewer.hpp"
+#include "sco/optimizers.hpp"
 #include "trajopt/collision_checker.hpp"
-#include "utils/stl_to_string.hpp"
 #include "trajopt/common.hpp"
 #include "trajopt/problem_description.hpp"
-#include "sco/optimizers.hpp"
 #include "trajopt/rave_utils.hpp"
-#include "osgviewer/osgviewer.hpp"
-#include <ctime>
-#include "utils/eigen_conversions.hpp"
-#include "utils/clock.hpp"
-#include <boost/foreach.hpp>
-#include <boost/assign.hpp>
-#include "utils/config.hpp"
 #include "trajopt_test_utils.hpp"
+#include "utils/clock.hpp"
+#include "utils/config.hpp"
+#include "utils/eigen_conversions.hpp"
+#include "utils/stl_to_string.hpp"
 using namespace trajopt;
 using namespace std;
 using namespace OpenRAVE;
@@ -23,7 +25,7 @@ using namespace boost::assign;
 
 namespace {
 
-bool plotting=false, verbose=false;
+bool plotting = false, verbose = false;
 
 #if 0
 OR::Transform randomReachablePose(RobotAndDOF& rad, KinBody::LinkPtr link) {
@@ -34,11 +36,10 @@ OR::Transform randomReachablePose(RobotAndDOF& rad, KinBody::LinkPtr link) {
 }
 #endif
 
-}
-
+}  // namespace
 
 class PlanningTest : public testing::TestWithParam<const char*> {
-public:
+ public:
   static EnvironmentBasePtr env;
   static OSGViewerPtr viewer;
 
@@ -46,17 +47,17 @@ public:
     RAVELOG_DEBUG("SetUp\n");
     RobotBasePtr robot = GetRobot(*env);
     robot->SetDOFValues(DblVec(robot->GetDOF(), 0));
-    Transform I; I.identity();
+    Transform I;
+    I.identity();
     robot->SetTransform(I);
   }
-
 
   static void SetUpTestCase() {
     RAVELOG_DEBUG("SetupTestCase\n");
     RaveInitialize(false, verbose ? Level_Debug : Level_Info);
     env = RaveCreateEnvironment();
     env->StopSimulation();
-    env->Load("robots/pr2-beta-static.zae") ;
+    env->Load("robots/pr2-beta-static.zae");
     env->Load(string(DATA_DIR) + "/table.xml");
     if (plotting) {
       viewer.reset(new OSGViewer(env));
@@ -71,7 +72,6 @@ public:
     env.reset();
 
     RaveDestroy();
-
   }
 };
 EnvironmentBasePtr PlanningTest::env;
@@ -83,12 +83,11 @@ TEST_F(PlanningTest, numerical_ik1) {
   ASSERT_TRUE(!!prob);
 
   BasicTrustRegionSQP opt(prob);
-//  opt.addCallback(boost::bind(&PlotCosts, boost::ref(prob->getCosts()),*prob->GetRAD(), prob->GetVars(), _1));
+  //  opt.addCallback(boost::bind(&PlotCosts, boost::ref(prob->getCosts()),*prob->GetRAD(), prob->GetVars(), _1));
   opt.initialize(DblVec(prob->GetNumDOF(), 0));
   double tStart = GetClock();
   opt.optimize();
-  RAVELOG_INFO("planning time: %.3f\n", GetClock()-tStart);
-
+  RAVELOG_INFO("planning time: %.3f\n", GetClock() - tStart);
 }
 
 TEST_F(PlanningTest, arm_around_table) {
@@ -103,7 +102,6 @@ TEST_F(PlanningTest, arm_around_table) {
   TrajOptProbPtr prob = ConstructProblem(pci);
   ASSERT_TRUE(!!prob);
 
-
   BasicTrustRegionSQP opt(prob);
   TrajPlotter plotter(env, pci.rad, prob->GetVars());
   if (plotting) {
@@ -114,19 +112,16 @@ TEST_F(PlanningTest, arm_around_table) {
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   double tStart = GetClock();
   opt.optimize();
-  RAVELOG_INFO("planning time: %.3f\n", GetClock()-tStart);
+  RAVELOG_INFO("planning time: %.3f\n", GetClock() - tStart);
 
   vector<Collision> collisions;
-  CollisionChecker::GetOrCreate(*env)->ContinuousCheckTrajectory(getTraj(opt.x(), prob->GetVars()), *pci.rad, collisions);
+  CollisionChecker::GetOrCreate(*env)->ContinuousCheckTrajectory(getTraj(opt.x(), prob->GetVars()), *pci.rad,
+                                                                 collisions);
   RAVELOG_INFO("number of continuous collisions: %i\n", collisions.size());
   ASSERT_EQ(collisions.size(), 0);
-
-
 }
 
-
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
 
   {
@@ -138,5 +133,5 @@ int main(int argc, char** argv)
   }
   srand(0);
 
-   return RUN_ALL_TESTS();
+  return RUN_ALL_TESTS();
 }

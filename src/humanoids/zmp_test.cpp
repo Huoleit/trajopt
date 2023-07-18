@@ -1,22 +1,24 @@
-#include "humanoids/humanoids.hpp"
+#include <openrave-core.h>
+#include <openrave/openrave.h>
+
+#include <boost/assign.hpp>
+#include <boost/foreach.hpp>
+
 #include "humanoids/hull2d.hpp"
+#include "humanoids/humanoids.hpp"
+#include "osgviewer/osgviewer.hpp"
 #include "sco/expr_op_overloads.hpp"
 #include "sco/expr_vec_ops.hpp"
 #include "sco/modeling_utils.hpp"
-#include "osgviewer/osgviewer.hpp"
-#include "trajopt/common.hpp"
 #include "trajopt/collision_avoidance.hpp"
+#include "trajopt/common.hpp"
+#include "trajopt/configuration_space.hpp"
 #include "trajopt/kinematic_terms.hpp"
 #include "trajopt/plot_callback.hpp"
 #include "trajopt/problem_description.hpp"
-#include "trajopt/configuration_space.hpp"
 #include "utils/eigen_conversions.hpp"
 #include "utils/stl_to_string.hpp"
 #include "utils/vector_ops.hpp"
-#include <boost/assign.hpp>
-#include <boost/foreach.hpp>
-#include <openrave-core.h>
-#include <openrave/openrave.h>
 using namespace boost::assign;
 using namespace Eigen;
 using namespace OpenRAVE;
@@ -25,14 +27,13 @@ using namespace trajopt;
 using namespace util;
 
 bool gEnablePlot = true;
-const float DIST_PEN=.02;
-const float COLL_COEFF=10;
+const float DIST_PEN = .02;
+const float COLL_COEFF = 10;
 const float VEL_COEFF = .25;
 string data_dir() {
   string out = DATA_DIR;
   return out;
 }
-
 
 /**
 import openravepy
@@ -45,11 +46,8 @@ aabb.pos()+aabb.extents()
 aabb.pos()-aabb.extents()
  */
 MatrixX2d GetLocalAabbPoly() {
-  MatrixX2d out(4,2);
-  out << 0.17939, 0.062707,
-      0.17939, -0.061646,
-      -0.08246, -0.061646,
-      -0.08246, 0.061646;
+  MatrixX2d out(4, 2);
+  out << 0.17939, 0.062707, 0.17939, -0.061646, -0.08246, -0.061646, -0.08246, 0.061646;
   return out;
 }
 MatrixX2d local_aabb_poly = GetLocalAabbPoly();
@@ -73,7 +71,7 @@ MatrixT concat0(const MatrixT& x, const MatrixT& y) {
 }
 template <typename MatrixT>
 void extend0(MatrixT& x, const MatrixT& y) {
-  x.conservativeResize(x.rows()+y.rows(), NoChange);
+  x.conservativeResize(x.rows() + y.rows(), NoChange);
   x.bottomRows(y.rows()) = y;
 }
 
@@ -84,7 +82,6 @@ MatrixX2d GetBothPoly(const RobotBase& gfe) {
   MatrixX2d hull = hull2d(verts);
   return hull;
 }
-
 
 void SetLeftZMP(TrajOptProb& prob, int t) {
   RobotAndDOFPtr rad = prob.GetRAD();
@@ -99,8 +96,8 @@ void SetBothZMP(TrajOptProb& prob, int t) {
   prob.addConstraint(ConstraintPtr(new ZMP(rad, GetBothPoly(*rad->GetRobot()), prob.GetVarRow(t))));
 }
 void SetLinkFixed(TrajOptProb& prob, KinBody::LinkPtr link, int t, const OpenRAVE::Transform& tlink) {
-//  BoolVec allbutz(6,true);
-//  allbutz[5] = false;
+  //  BoolVec allbutz(6,true);
+  //  allbutz[5] = false;
   prob.addConstraint(ConstraintPtr(new CartPoseConstraint(prob.GetVarRow(t), tlink, prob.GetRAD(), link)));
 }
 void SetLinkFixed(TrajOptProb& prob, KinBody::LinkPtr link, int t) {
@@ -110,37 +107,34 @@ void SetLinkFixed(TrajOptProb& prob, KinBody::LinkPtr link, int t) {
 void SetStartFixed(TrajOptProb& prob) {
   DblVec cur_dofvals = prob.GetRAD()->GetDOFValues();
   VarArray& vars = prob.GetVars();
-  for (int j=0; j < vars.cols(); ++j) {
-    prob.addLinearConstraint(exprSub(AffExpr(vars(0,j)), cur_dofvals[j]), EQ);
+  for (int j = 0; j < vars.cols(); ++j) {
+    prob.addLinearConstraint(exprSub(AffExpr(vars(0, j)), cur_dofvals[j]), EQ);
   }
 }
-
 
 TrajArray Optimize(TrajOptProbPtr prob) {
   // optimize
   BasicTrustRegionSQP opt(prob);
   opt.improve_ratio_threshold_ = .1;
-//  opt.min
+  //  opt.min
   TrajArray init(prob->GetNumSteps(), prob->GetNumDOF());
   DblVec cur_dofvals = prob->GetRAD()->GetDOFValues();
-  for (int i=0; i < prob->GetNumSteps(); ++i) init.row(i) = toVectorXd(cur_dofvals);
+  for (int i = 0; i < prob->GetNumSteps(); ++i) init.row(i) = toVectorXd(cur_dofvals);
   init += DblMatrix::Random(init.rows(), init.cols()) * .01;
-  opt.initialize(DblVec(init.data(), init.data()+init.rows()*init.cols()));
+  opt.initialize(DblVec(init.data(), init.data() + init.rows() * init.cols()));
   if (gEnablePlot) opt.addCallback(PlotCallback(*prob));
   opt.optimize();
   return getTraj(opt.x(), prob->GetVars());
 }
 
 void LeftRightStep(RobotBasePtr gfe, TrajArray& out) {
-  OpenRAVE::KinBody::LinkPtr lfoot = gfe->GetLink("l_foot"),
-      rfoot = gfe->GetLink("r_foot");
+  OpenRAVE::KinBody::LinkPtr lfoot = gfe->GetLink("l_foot"), rfoot = gfe->GetLink("r_foot");
 
   CollisionCheckerPtr cc = CollisionChecker::GetOrCreate(*gfe->GetEnv());
   vector<Collision> collisions;
   cc->AllVsAll(collisions);
-//  cc->IgnoreLink(lfoot);
-//  cc->IgnoreLink(rfoot);
-
+  //  cc->IgnoreLink(lfoot);
+  //  cc->IgnoreLink(rfoot);
 
   // determine foot placement pose
   // set up optimization problem
@@ -156,35 +150,32 @@ void LeftRightStep(RobotBasePtr gfe, TrajArray& out) {
   {
     TrajOptProbPtr prob(new TrajOptProb(n_steps, rad));
     SetStartFixed(*prob);
-    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF*VectorXd::Ones(rad->GetDOF()))));
+    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF * VectorXd::Ones(rad->GetDOF()))));
 
-
-    for (int i=1; i < n_steps; ++i) {
+    for (int i = 1; i < n_steps; ++i) {
       prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
       prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
       prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
-//      prob->addConstr(ConstraintPtr(new CartPoseConstraint(prob->GetVarRow(i), Tfoottarg, rad, rfoot, xonly)));
+      //      prob->addConstr(ConstraintPtr(new CartPoseConstraint(prob->GetVarRow(i), Tfoottarg, rad, rfoot, xonly)));
       SetLinkFixed(*prob, lfoot, i);
       SetLeftZMP(*prob, i);
     }
     OpenRAVE::Transform Tfootnow = rfoot->GetTransform();
     OpenRAVE::Transform Tfoottarg = Tfootnow;
-    Tfoottarg.trans.x = lfoot->GetTransform().trans.x + step_dist; // 30 cm forward
-//    if (Tfoottarg.trans.x >= -.1 && Tfoottarg.trans.x < .1) Tfoottarg.trans.z += .05;
-    SetLinkFixed(*prob, rfoot, n_steps-1, Tfoottarg);
+    Tfoottarg.trans.x = lfoot->GetTransform().trans.x + step_dist;  // 30 cm forward
+    //    if (Tfoottarg.trans.x >= -.1 && Tfoottarg.trans.x < .1) Tfoottarg.trans.z += .05;
+    SetLinkFixed(*prob, rfoot, n_steps - 1, Tfoottarg);
 
     TrajArray traj = Optimize(prob);
-    rad->SetDOFValues(toDblVec(traj.row(n_steps-1)));
-    extend0(out,traj);
-
+    rad->SetDOFValues(toDblVec(traj.row(n_steps - 1)));
+    extend0(out, traj);
   }
-
 
   {
     TrajOptProbPtr prob(new TrajOptProb(n_steps, rad));
     SetStartFixed(*prob);
-    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF*VectorXd::Ones(rad->GetDOF()))));
-    for (int i=1; i < n_steps; ++i) {
+    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF * VectorXd::Ones(rad->GetDOF()))));
+    for (int i = 1; i < n_steps; ++i) {
       prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
       prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
       prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
@@ -192,19 +183,18 @@ void LeftRightStep(RobotBasePtr gfe, TrajArray& out) {
       SetLinkFixed(*prob, rfoot, i);
       SetBothZMP(*prob, i);
     }
-    SetRightZMP(*prob, n_steps-1);
+    SetRightZMP(*prob, n_steps - 1);
 
     TrajArray traj = Optimize(prob);
-    rad->SetDOFValues(toDblVec(traj.row(n_steps-1)));
-    extend0(out,traj);
-
+    rad->SetDOFValues(toDblVec(traj.row(n_steps - 1)));
+    extend0(out, traj);
   }
 
   {
     TrajOptProbPtr prob(new TrajOptProb(n_steps, rad));
     SetStartFixed(*prob);
-    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF*VectorXd::Ones(rad->GetDOF()))));
-    for (int i=1; i < n_steps; ++i) {
+    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF * VectorXd::Ones(rad->GetDOF()))));
+    for (int i = 1; i < n_steps; ++i) {
       prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
       prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
       prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
@@ -213,21 +203,19 @@ void LeftRightStep(RobotBasePtr gfe, TrajArray& out) {
     }
     OpenRAVE::Transform Tfootnow = lfoot->GetTransform();
     OpenRAVE::Transform Tfoottarg = Tfootnow;
-    Tfoottarg.trans.x = rfoot->GetTransform().trans.x + step_dist; // 30 cm forward
-    SetLinkFixed(*prob, lfoot, n_steps-1, Tfoottarg);
+    Tfoottarg.trans.x = rfoot->GetTransform().trans.x + step_dist;  // 30 cm forward
+    SetLinkFixed(*prob, lfoot, n_steps - 1, Tfoottarg);
 
     TrajArray traj = Optimize(prob);
-    rad->SetDOFValues(toDblVec(traj.row(n_steps-1)));
-    extend0(out,traj);
-
+    rad->SetDOFValues(toDblVec(traj.row(n_steps - 1)));
+    extend0(out, traj);
   }
-
 
   {
     TrajOptProbPtr prob(new TrajOptProb(n_steps, rad));
     SetStartFixed(*prob);
-    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF*VectorXd::Ones(rad->GetDOF()))));
-    for (int i=1; i < n_steps; ++i) {
+    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF * VectorXd::Ones(rad->GetDOF()))));
+    for (int i = 1; i < n_steps; ++i) {
       prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
       prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
       prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
@@ -235,18 +223,16 @@ void LeftRightStep(RobotBasePtr gfe, TrajArray& out) {
       SetLinkFixed(*prob, rfoot, i);
       SetBothZMP(*prob, i);
     }
-    SetLeftZMP(*prob, n_steps-1);
+    SetLeftZMP(*prob, n_steps - 1);
 
     TrajArray traj = Optimize(prob);
-    rad->SetDOFValues(toDblVec(traj.row(n_steps-1)));
-    extend0(out,traj);
-
+    rad->SetDOFValues(toDblVec(traj.row(n_steps - 1)));
+    extend0(out, traj);
   }
-
 }
 
 void AnimateTrajectory(RobotAndDOFPtr rad, TrajArray& traj, OSGViewerPtr viewer) {
-  for (int i=0; i < traj.rows(); ++i) {
+  for (int i = 0; i < traj.rows(); ++i) {
     cout << "step " << i << endl;
     rad->SetDOFValues(toDblVec(traj.row(i)));
     viewer->Idle();
@@ -259,13 +245,13 @@ int main(int argc, char* argv[]) {
   env->StopSimulation();
   env->Load(string(getenv("HOME")) + "/Proj/darpa-proposal/drclogs.env.xml");
   env->Load(string(getenv("HOME")) + "/Proj/drc/gfe.xml");
-  vector<RobotBasePtr> robots; env->GetRobots(robots);
+  vector<RobotBasePtr> robots;
+  env->GetRobots(robots);
   RobotBasePtr gfe = robots[0];
   OSGViewerPtr viewer(new OSGViewer(env));
   env->AddViewer(viewer);
 
   RobotAndDOFPtr rad(new RobotAndDOF(gfe, arange(gfe->GetDOF()), OR::DOF_Transform));
-
 
   // translate to starting position
   {
@@ -276,7 +262,6 @@ int main(int argc, char* argv[]) {
     gfe->SetTransform(T);
   }
 
-
   TrajArray traj(0, rad->GetDOF());
   LeftRightStep(gfe, traj);
   LeftRightStep(gfe, traj);
@@ -284,46 +269,44 @@ int main(int argc, char* argv[]) {
   LeftRightStep(gfe, traj);
   LeftRightStep(gfe, traj);
 
-//  AnimateTrajectory(rad, traj, viewer);
-
-
+  //  AnimateTrajectory(rad, traj, viewer);
 
   {
     gfe->SetDOFValues(DblVec(gfe->GetDOF(), 0));
     OpenRAVE::Transform T = gfe->GetTransform();
-    T.rot = OR::Vector(1,0,0,.2);
+    T.rot = OR::Vector(1, 0, 0, .2);
     T.rot.normalize4();
     T.trans = OR::Vector(2.4, 1.4, .92712);
     gfe->SetTransform(T);
     int n_steps = 5;
     TrajOptProbPtr prob(new TrajOptProb(n_steps, rad));
     SetStartFixed(*prob);
-    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF*VectorXd::Ones(rad->GetDOF()))));
-    for (int i=1; i < n_steps; ++i) {
+    prob->addCost(CostPtr(new JointVelCost(prob->GetVars(), VEL_COEFF * VectorXd::Ones(rad->GetDOF()))));
+    for (int i = 1; i < n_steps; ++i) {
       SetLinkFixed(*prob, gfe->GetLink("l_foot"), i);
       SetLinkFixed(*prob, gfe->GetLink("r_foot"), i);
       SetLeftZMP(*prob, i);
       SetRightZMP(*prob, i);
 
-//      prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
-//      prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
-//      prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
+      //      prob->addCost(CostPtr(new StaticTorqueCost(rad, prob->GetVarRow(i), 1)));
+      //      prob->addCost(CostPtr(new PECost(rad, prob->GetVarRow(i), .01)));
+      //      prob->addCost(CostPtr(new CollisionCost(DIST_PEN, COLL_COEFF, rad, prob->GetVarRow(i))));
     }
     OpenRAVE::Transform buttonpose = env->GetKinBody("bigredbutton")->GetTransform();
     buttonpose.trans.z += .1;
     BoolVec justposition(6, false);
     justposition[3] = justposition[4] = justposition[5] = true;
-    prob->addConstraint(ConstraintPtr(new CartPoseConstraint(prob->GetVarRow(n_steps-1), buttonpose,
-        rad, gfe->GetLink("r_hand"), justposition)));
+    prob->addConstraint(ConstraintPtr(
+        new CartPoseConstraint(prob->GetVarRow(n_steps - 1), buttonpose, rad, gfe->GetLink("r_hand"), justposition)));
     TrajArray traj1 = Optimize(prob);
     extend0(traj, traj1);
   }
 
-AnimateTrajectory(rad, traj, viewer);
+  AnimateTrajectory(rad, traj, viewer);
 
   viewer->Idle();
-ofstream trajfile("/tmp/traj.txt");
-trajfile << traj << endl;
+  ofstream trajfile("/tmp/traj.txt");
+  trajfile << traj << endl;
 
   RaveDestroy();
 }

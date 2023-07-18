@@ -1,4 +1,5 @@
 #include <json/json.h>
+
 #include <iostream>
 #include <string>
 using namespace std;
@@ -13,5 +14,6 @@ int main() {
   y["asdf"];
   cout << y << endl;
   Value k;
-  cout << k.isArray() << endl;;
+  cout << k.isArray() << endl;
+  ;
 }

@@ -63,13 +63,11 @@ bool ManipulatorControl::ProcessMouseInput(const osgGA::GUIEventAdapter& ea) {
     osg::Vec3 dragvec = xdir * (depth * dx / ea.getWindowWidth()) + ydir * (depth * dy / ea.getWindowHeight());
     // cout << toRave(dragvec) << endl;
 
-    if ((ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_ALT) != 0) { // Press ALT to rotate
+    if ((ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_ALT) != 0) {  // Press ALT to rotate
       OpenRAVE::dReal angle = -depth * dx / ea.getWindowWidth() * 2 * M_PI;
       T.rot = quatMultiply(quatFromAxisAngle(toRave(depthdir), angle), T.rot);
       T.rot.normalize4();
-    }
-    else
-    {
+    } else {
       T.trans += toRave(dragvec);
     }
     vector<double> iksoln;
@@ -77,7 +75,9 @@ bool ManipulatorControl::ProcessMouseInput(const osgGA::GUIEventAdapter& ea) {
     if (iksoln.empty()) {
       cerr << "no ik solution found" << endl;
     } else {
-      for (auto i : iksoln){ cout << i << ", ";}
+      for (auto i : iksoln) {
+        cout << i << ", ";
+      }
       cout << endl;
       m_manip->GetRobot()->SetDOFValues(iksoln, false, m_manip->GetArmIndices());
       m_viewer->UpdateSceneData();

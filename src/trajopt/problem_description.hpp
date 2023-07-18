@@ -1,11 +1,14 @@
 #pragma once
-#include "trajopt/common.hpp"
-#include "json_marshal.hpp"
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
-#include "traj_plotter.hpp"
 
-namespace sco{struct OptResults;}
+#include "json_marshal.hpp"
+#include "traj_plotter.hpp"
+#include "trajopt/common.hpp"
+
+namespace sco {
+struct OptResults;
+}
 
 namespace trajopt {
 
@@ -27,49 +30,39 @@ TrajOptProbPtr TRAJOPT_API ConstructProblem(const ProblemConstructionInfo&);
 TrajOptProbPtr TRAJOPT_API ConstructProblem(const Json::Value&, OpenRAVE::EnvironmentBasePtr env);
 TrajOptResultPtr TRAJOPT_API OptimizeProblem(TrajOptProbPtr, bool plot);
 
-enum TermType {
-  TT_COST,
-  TT_CNT
-};
+enum TermType { TT_COST, TT_CNT };
 
-#define DEFINE_CREATE(classname) \
-  static TermInfoPtr create() {\
-    TermInfoPtr out(new classname());\
-    return out;\
+#define DEFINE_CREATE(classname)      \
+  static TermInfoPtr create() {       \
+    TermInfoPtr out(new classname()); \
+    return out;                       \
   }
-  
 
 /**
  * Holds all the data for a trajectory optimization problem
  * so you can modify it programmatically, e.g. add your own costs
  */
 class TRAJOPT_API TrajOptProb : public OptProb {
-public:
+ public:
   TrajOptProb();
   TrajOptProb(int n_steps, ConfigurationPtr rad);
   ~TrajOptProb() {}
-  VarVector GetVarRow(int i) {
-    return m_traj_vars.row(i);
-  }
-  Var& GetVar(int i, int j) {
-    return m_traj_vars.at(i,j);
-  }
-  VarArray& GetVars() {
-    return m_traj_vars;
-  }
-  int GetNumSteps() {return m_traj_vars.rows();}
-  int GetNumDOF() {return m_traj_vars.cols();}
-  ConfigurationPtr GetRAD() {return m_rad;}
-  OR::EnvironmentBasePtr GetEnv() {return m_rad->GetEnv();}
+  VarVector GetVarRow(int i) { return m_traj_vars.row(i); }
+  Var& GetVar(int i, int j) { return m_traj_vars.at(i, j); }
+  VarArray& GetVars() { return m_traj_vars; }
+  int GetNumSteps() { return m_traj_vars.rows(); }
+  int GetNumDOF() { return m_traj_vars.cols(); }
+  ConfigurationPtr GetRAD() { return m_rad; }
+  OR::EnvironmentBasePtr GetEnv() { return m_rad->GetEnv(); }
 
-  void SetInitTraj(const TrajArray& x) {m_init_traj = x;}
-  TrajArray GetInitTraj() {return m_init_traj;}
+  void SetInitTraj(const TrajArray& x) { m_init_traj = x; }
+  TrajArray GetInitTraj() { return m_init_traj; }
 
-  TrajPlotterPtr GetPlotter() {return m_trajplotter;}
+  TrajPlotterPtr GetPlotter() { return m_trajplotter; }
 
   friend TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo&);
 
-private:
+ private:
   VarArray m_traj_vars;
   ConfigurationPtr m_rad;
   TrajArray m_init_traj;
@@ -85,12 +78,12 @@ struct TRAJOPT_API TrajOptResult {
   TrajOptResult(OptResults& opt, TrajOptProb& prob);
 };
 
-struct BasicInfo  {
+struct BasicInfo {
   bool start_fixed;
   int n_steps;
   string manip;
-  string robot; // optional
-  IntVec dofs_fixed; // optional
+  string robot;       // optional
+  IntVec dofs_fixed;  // optional
   void fromJson(const Json::Value& v);
 };
 
@@ -107,23 +100,18 @@ struct InitInfo {
   void fromJson(const Json::Value& v);
 };
 
-
-struct TRAJOPT_API MakesCost {
-};
-struct TRAJOPT_API MakesConstraint {
-};
+struct TRAJOPT_API MakesCost {};
+struct TRAJOPT_API MakesConstraint {};
 
 /**
 When cost or constraint element of JSON doc is read, one of these guys gets constructed to hold the parameters.
 Then it later gets converted to a Cost object by the hatch method
 */
-struct TRAJOPT_API TermInfo  {
-
-  string name; // xxx is this used?
+struct TRAJOPT_API TermInfo {
+  string name;  // xxx is this used?
   TermType term_type;
-  virtual void fromJson(const Json::Value& v)=0;
+  virtual void fromJson(const Json::Value& v) = 0;
   virtual void hatch(TrajOptProb& prob) = 0;
-  
 
   static TermInfoPtr fromName(const string& type);
 
@@ -135,7 +123,8 @@ struct TRAJOPT_API TermInfo  {
   static void RegisterMaker(const std::string& type, MakerFunc);
 
   virtual ~TermInfo() {}
-private:
+
+ private:
   static std::map<string, MakerFunc> name2maker;
 };
 // void fromJson(const Json::Value& v, TermInfoPtr&);
@@ -144,7 +133,7 @@ private:
 This object holds all the data that's read from the JSON document
 */
 struct TRAJOPT_API ProblemConstructionInfo {
-public:
+ public:
   BasicInfo basic_info;
   vector<TermInfoPtr> cost_infos;
   vector<TermInfoPtr> cnt_infos;
@@ -174,7 +163,6 @@ struct PoseCostInfo : public TermInfo, public MakesCost, public MakesConstraint 
   DEFINE_CREATE(PoseCostInfo);
 };
 
-
 /**
   \brief Joint space position cost
 
@@ -190,8 +178,6 @@ struct JointPosCostInfo : public TermInfo, public MakesCost {
   void hatch(TrajOptProb& prob);
   DEFINE_CREATE(JointPosCostInfo)
 };
-
-
 
 /**
  \brief Motion constraint on link
@@ -245,7 +231,8 @@ Distrete-time penalty:
   cost = \sum_{t=0}^{T-1} \sum_{A, B} | distpen_t - sd(A,B) |^+
 \f}
 
-Continuous-time penalty: same, except you consider swept-out shaps of robot links. Currently self-collisions are not included.
+Continuous-time penalty: same, except you consider swept-out shaps of robot links. Currently self-collisions are not
+included.
 
 */
 struct CollisionCostInfo : public TermInfo, public MakesCost {
@@ -263,7 +250,6 @@ struct CollisionCostInfo : public TermInfo, public MakesCost {
   DEFINE_CREATE(CollisionCostInfo)
 };
 
-
 // TODO: unify with joint position constraint
 /**
 joint-space position constraint
@@ -278,6 +264,4 @@ struct JointConstraintInfo : public TermInfo, public MakesConstraint {
   DEFINE_CREATE(JointConstraintInfo)
 };
 
-
-
-}
+}  // namespace trajopt
