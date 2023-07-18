@@ -73,10 +73,33 @@ void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
 
 void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x) {
   OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
+  vector<GraphHandlePtr> handles;
 
   MatrixXd traj = getTraj(x, m_trajvars);
   KinBodyPtr body = m_config->GetBodies().front();
   vector<int> joint_inds = m_config->GetJointIndices();
+
+  vector<Eigen::MatrixXf> linktrajs(m_links.size(), Eigen::MatrixXf(traj.rows(), 3));
+  for (int i = 0; i < traj.rows(); ++i) {
+    m_config->SetDOFValues(toDblVec(traj.row(i)));
+    if (i % m_decimation == 0) {
+      handles.push_back(viewer->PlotKinBody(body));
+      SetTransparency(handles.back(), .2);
+    }
+    int iLink = 0;
+    BOOST_FOREACH (const KinBody::LinkPtr& link, m_links) {
+      OR::Vector p = link->GetTransform().trans;
+      linktrajs[iLink].row(i) = Eigen::Vector3f(p.x, p.y, p.z);
+      ++iLink;
+    }
+  }
+
+  BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }
+
+  BOOST_FOREACH (Eigen::MatrixXf& linktraj, linktrajs) {
+    handles.push_back(m_env->drawlinestrip(linktraj.data(), linktraj.rows(), linktraj.cols() * sizeof(float), 2,
+                                           RaveVectorf(1, 0, 0, 1)));
+  }
 
   viewer->AnimateKinBody(body, joint_inds, traj, 1.0);
 

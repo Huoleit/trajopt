@@ -65,8 +65,8 @@ int main() {
   TrajPlotter plotter(env, pci.rad, prob->GetVars());
 
   plotter.Add(prob->getCosts());
-  opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
   plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
+  opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
 
   cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
 

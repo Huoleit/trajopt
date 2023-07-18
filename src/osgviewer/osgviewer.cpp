@@ -21,6 +21,7 @@
 #include <osgText/Text>
 #include <osgUtil/SmoothingVisitor>
 #include <osgViewer/Viewer>
+#include <string>
 
 #include "openrave_userdata_utils.hpp"
 #include "utils/eigen_conversions.hpp"
@@ -370,6 +371,17 @@ class SetTransparencyVisitor : public osg::NodeVisitor {
   }
 };
 
+class ToggleAnimationVisitor : public osg::NodeVisitor {
+ public:
+  ToggleAnimationVisitor() { setTraversalMode(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN); }
+  void apply(MatrixTransform& node) override {
+    if (node.getUpdateCallback() && string(node.getUpdateCallback()->className()) == string("AnimationPathCallback")) {
+      AnimationPathCallback* cb = static_cast<AnimationPathCallback*>(node.getUpdateCallback());
+      cb->setPause(!cb->getPause());
+    }
+  }
+};
+
 class RefPtrHolder : public UserData {
  public:
   osg::ref_ptr<osg::Referenced> rp;
@@ -476,6 +488,7 @@ OSGViewer::OSGViewer(EnvironmentBasePtr env) : ViewerBase(env), m_idling(false) 
   AddKeyCallback('h', boost::bind(&OSGViewer::PrintHelp, this), "Display help");
   AddKeyCallback('p', boost::bind(&OSGViewer::Idle, this), "Toggle idle");
   AddKeyCallback('s', boost::bind(&OSGViewer::TakeScreenshot, this), "Take screenshot");
+  AddKeyCallback('a', boost::bind(&OSGViewer::ToggleAllAnimation, this), "Toggle animation");
   AddKeyCallback(osgGA::GUIEventAdapter::KEY_Escape, &throw_runtime_error, "Quit (raise exception)");
   PrintHelp();
   m_viewer.setRunFrameScheme(osgViewer::ViewerBase::CONTINUOUS);
@@ -618,6 +631,12 @@ void OSGViewer::SetAllTransparency(float alpha) {
   SetTransparencyVisitor visitor(alpha);
   m_root->accept(visitor);
 }
+
+void OSGViewer::ToggleAllAnimation() {
+  ToggleAnimationVisitor visitor;
+  m_root->accept(visitor);
+}
+
 void OSGViewer::SetTransparency(OpenRAVE::KinBodyPtr body, float alpha) {
   UpdateSceneData();
   KinBodyGroup* node = GetOsgGroup(*body);

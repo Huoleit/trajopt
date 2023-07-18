@@ -58,6 +58,7 @@ class TRAJOPT_API OSGViewer : public OpenRAVE::ViewerBase {
 
   void SetAllTransparency(float alpha);
   void SetTransparency(OpenRAVE::KinBodyPtr, float alpha);
+  void ToggleAllAnimation();
 
   OpenRAVE::GraphHandlePtr PlotAxes(const OpenRAVE::Transform& T, float size);
   OpenRAVE::GraphHandlePtr PlotSphere(const OpenRAVE::Vector& x, float radius);

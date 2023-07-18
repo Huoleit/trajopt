@@ -206,6 +206,10 @@
         "datatypes": "cpp",
         "registry": "cpp",
         "graphicswindow": "cpp",
-        "compositeviewer": "cpp"
+        "compositeviewer": "cpp",
+        "cameramanipulator": "cpp",
+        "eventvisitor": "cpp",
+        "updatevisitor": "cpp",
+        "smoothingvisitor": "cpp"
     }
 }
