@@ -32,7 +32,8 @@
 				"xaver.clang-format",
 				"ms-vscode.cpptools-extension-pack",
 				"GitHub.copilot",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"ms-python.python"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",
