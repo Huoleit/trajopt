@@ -3,9 +3,6 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/src
 )
 
-
-add_definitions(-DEIGEN_DEFAULT_TO_ROW_MAJOR)
-
 # gcc 4.7 workaround:
 # execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
 #                 OUTPUT_VARIABLE GCC_VERSION)

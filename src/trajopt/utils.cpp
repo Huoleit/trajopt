@@ -17,7 +17,7 @@ TrajArray getTraj(const DblVec& x, const VarArray& vars) {
   return out;
 }
 TrajArray getTraj(const DblVec& x, const AffArray& arr) {
-  MatrixXd out(arr.rows(), arr.cols());
+  TrajArray out(arr.rows(), arr.cols());
   for (int i = 0; i < arr.rows(); ++i) {
     for (int j = 0; j < arr.cols(); ++j) {
       out(i, j) = arr(i, j).value(x);
