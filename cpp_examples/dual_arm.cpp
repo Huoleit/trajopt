@@ -62,22 +62,16 @@ int main() {
   TrajOptProbPtr prob = ConstructProblem(pci);
 
   BasicTrustRegionSQP opt(prob);
-  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
+  TrajPlotter plotter(env, pci.rad, prob->GetVars());
 
   plotter.Add(prob->getCosts());
   plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
-  // opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
+  opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
 
-  // cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
+  cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
-
-  // TrajArray traj = getTraj(opt.x(), prob->GetVars());
-  // viewer->AnimateKinBody(pci.rad->GetRobot(), pci.rad->GetJointIndices(), traj, pci.basic_info.dt);
-  // viewer->Idle();
-
-  plotter.OptimizerAnimationCallback(prob.get(), opt.x());
 
   viewer.reset();
   env.reset();

@@ -1,10 +1,10 @@
 #include <openrave-core.h>
 
+#include <Eigen/Core>
+
 #include "get_data_dir.h"
 #include "osgviewer/osgviewer.hpp"
-#include "osgviewer/robot_ui.hpp"
 #include "sco/optimizers.hpp"
-#include "trajopt/collision_checker.hpp"
 #include "trajopt/common.hpp"
 #include "trajopt/problem_description.hpp"
 #include "trajopt/rave_utils.hpp"
@@ -40,45 +40,37 @@ int main() {
     bool success = env->Load("robots/pr2-beta-static.zae");
     FAIL_IF_FALSE(success);
   }
-  {
-    bool success = env->Load(getDataPath() + "/table.xml");
-    FAIL_IF_FALSE(success);
-  }
   viewer.reset(new OSGViewer(env));
-  viewer->UpdateSceneData();
   env->AddViewer(viewer);
+  // viewer->UpdateSceneData();
 
   RobotBasePtr robot = GetRobot(*env);
   robot->SetDOFValues(DblVec(robot->GetDOF(), 0));
-  Transform I;
-  I.identity();
-  robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getDataPath() + "/time_optimal.json");
+  Json::Value root = readJsonFile(getDataPath() + "/get_feasible_no_collision.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
   TrajOptProbPtr prob = ConstructProblem(pci);
 
   BasicTrustRegionSQP opt(prob);
-  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
-
-  plotter.Add(prob->getCosts());
-  plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
-  // opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
-
-  // cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
 
-  // TrajArray traj = getTraj(opt.x(), prob->GetVars());
-  // viewer->AnimateKinBody(pci.rad->GetRobot(), pci.rad->GetJointIndices(), traj, pci.basic_info.dt);
-  // viewer->Idle();
+  TrajArray traj = getTraj(opt.x(), prob->GetVars());
+  viewer->AnimateKinBody(pci.rad->GetRobot(), pci.rad->GetJointIndices(), traj, pci.basic_info.dt);
+  cout << "traj: \n" << traj << endl;
 
-  plotter.OptimizerAnimationCallback(prob.get(), opt.x());
+  try {
+    viewer->Idle();
+  } catch (...) {
+    viewer.reset();
+    env.reset();
 
+    RaveDestroy();
+  }
   viewer.reset();
   env.reset();
 

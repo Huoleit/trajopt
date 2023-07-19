@@ -1,8 +1,9 @@
 {
   "basic_info": {
-    "n_steps": 9,
+    "n_steps": 50,
     "manip": "rightarm",
-    "start_fixed": true
+    "start_fixed": true,
+    "dt": 0.1
   },
   "costs": [
     {
@@ -12,12 +13,12 @@
       }
     },
     {
-      "type" : "collision",
-      "name" : "collision",
-      "params" : {
-        "continuous" : true,
-        "coeffs" : [20],
-        "dist_pen" : [0.025]
+      "type": "collision",
+      "name": "collision",
+      "params": {
+        "continuous": true,
+        "coeffs": [ 20 ],
+        "dist_pen": [ 0.025 ]
       }
     }
   ],
@@ -33,7 +34,7 @@
       "type": "joint_vel_limits",
       "name": "vel_limits",
       "params": {
-        "vals": [ 0.25 ]
+        "vals": [ 1.0 ]
       }
     }
   ],
