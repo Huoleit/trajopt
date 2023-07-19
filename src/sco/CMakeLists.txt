@@ -48,6 +48,10 @@ endif(GUROBI_FOUND)
 add_library(sco
   ${SCO_SOURCE_FILES}
 )
+# sco depends on different solver libraries
+if (HAVE_BPMPD) 
+  add_dependencies(sco bpmpd_caller)
+endif()
 
 
 set (SCO_LINK_LIBS utils)
