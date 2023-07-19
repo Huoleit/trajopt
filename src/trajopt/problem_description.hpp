@@ -82,6 +82,7 @@ struct BasicInfo {
   bool start_fixed;
   int n_steps;
   string manip;
+  double dt;
   string robot;       // optional
   IntVec dofs_fixed;  // optional
   void fromJson(const Json::Value& v);
@@ -216,7 +217,8 @@ struct JointAccCostInfo : public TermInfo, public MakesCost {
 };
 
 struct JointVelConstraintInfo : public TermInfo, public MakesConstraint {
-  DblVec vals;
+  DblVec vals;  // Joint speed limit rad/s
+  double dt;    // Time difference between knot point
   int first_step, last_step;
   void fromJson(const Value& v);
   void hatch(TrajOptProb& prob);

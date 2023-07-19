@@ -119,6 +119,7 @@ void BasicInfo::fromJson(const Json::Value& v) {
   childFromJson(v, start_fixed, "start_fixed", true);
   childFromJson(v, n_steps, "n_steps");
   childFromJson(v, manip, "manip");
+  childFromJson(v, dt, "dt", 0.1);
   childFromJson(v, robot, "robot", string(""));
   childFromJson(v, dofs_fixed, "dofs_fixed", IntVec());
   // TODO: optimization parameters, etc?
@@ -169,7 +170,20 @@ void InitInfo::fromJson(const Json::Value& v) {
   int n_dof = gPCI->rad->GetDOF();
 
   if (type_str == "stationary") {
-    data = toVectorXd(gPCI->rad->GetDOFValues()).transpose().replicate(n_steps, 1);
+    DblVec startPoint;
+    childFromJson(v, startPoint, "startpoint", DblVec());
+    if (startPoint.size() != 0) {
+      if (startPoint.size() != n_dof) {  // Given start point
+        PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j") % n_dof %
+                        startPoint.size());
+      }
+      data = toVectorXd(startPoint).transpose().replicate(n_steps, 1);
+      LOG_INFO("Using specified initial trajectory");
+    } else {
+      data = toVectorXd(gPCI->rad->GetDOFValues()).transpose().replicate(n_steps, 1);
+      LOG_INFO("No start point specified. Using current joint values.");
+    }
+
   } else if (type_str == "given_traj") {
     FAIL_IF_FALSE(v.isMember("data"));
     const Value& vdata = v["data"];
@@ -183,23 +197,23 @@ void InitInfo::fromJson(const Json::Value& v) {
       data.row(i) = toVectorXd(row);
     }
   } else if (type_str == "straight_line") {
-    DblVec startpoint;
-    childFromJson(v, startpoint, "startpoint");
-    if (startpoint.size() != n_dof) {
+    DblVec startPoint;
+    childFromJson(v, startPoint, "startPoint");
+    if (startPoint.size() != n_dof) {
       PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j") % n_dof %
-                      startpoint.size());
+                      startPoint.size());
     }
 
     FAIL_IF_FALSE(v.isMember("endpoint"));
-    DblVec endpoint;
-    childFromJson(v, endpoint, "endpoint");
-    if (endpoint.size() != n_dof) {
+    DblVec endPoint;
+    childFromJson(v, endPoint, "endpoint");
+    if (endPoint.size() != n_dof) {
       PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j") % n_dof %
-                      endpoint.size());
+                      endPoint.size());
     }
     data = TrajArray(n_steps, n_dof);
     for (int idof = 0; idof < n_dof; ++idof) {
-      data.col(idof) = VectorXd::LinSpaced(n_steps, startpoint[idof], endpoint[idof]);
+      data.col(idof) = VectorXd::LinSpaced(n_steps, startPoint[idof], endPoint[idof]);
     }
   }
 }
@@ -447,6 +461,7 @@ void JointAccCostInfo::fromJson(const Value& v) {
   const char* all_fields[] = {"coeffs"};
   ensure_only_members(params, all_fields, sizeof(all_fields) / sizeof(char*));
 }
+
 void JointAccCostInfo::hatch(TrajOptProb& prob) {
   prob.addCost(CostPtr(new JointAccCost(prob.GetVars(), toVectorXd(coeffs))));
   prob.getCosts().back()->setName(name);
@@ -462,11 +477,13 @@ void JointVelConstraintInfo::fromJson(const Value& v) {
   childFromJson(params, first_step, "first_step", 0);
   childFromJson(params, last_step, "last_step", n_steps - 1);
 
-  if (vals.size() == 1)
+  if (vals.size() == 1) {
     vals = DblVec(n_dof, vals[0]);
-  else if (vals.size() != n_dof) {
+  } else if (vals.size() != n_dof) {
     PRINT_AND_THROW(boost::format("wrong number of vals. expected %i got %i") % n_dof % vals.size());
   }
+
+  dt = gPCI->basic_info.dt;
 
   FAIL_IF_FALSE((first_step >= 0) && (first_step < n_steps));
   FAIL_IF_FALSE((last_step >= first_step) && (last_step < n_steps));
@@ -477,7 +494,9 @@ void JointVelConstraintInfo::fromJson(const Value& v) {
 void JointVelConstraintInfo::hatch(TrajOptProb& prob) {
   for (int i = first_step; i <= last_step - 1; ++i) {
     for (int j = 0; j < vals.size(); ++j) {
-      AffExpr vel = prob.GetVar(i + 1, j) - prob.GetVar(i, j);
+      AffExpr displacement = prob.GetVar(i + 1, j) - prob.GetVar(i, j);
+      AffExpr vel = exprMult(displacement, 1.0 / dt);
+
       prob.addLinearConstraint(vel - vals[j], INEQ);
       prob.addLinearConstraint(-vel - vals[j], INEQ);
     }
