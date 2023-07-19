@@ -724,7 +724,8 @@ GraphHandlePtr OSGViewer::PlotKinBody(KinBodyPtr body) {
   return GraphHandlePtr(handle);
 }
 
-void OSGViewer::AnimateKinBody(KinBodyPtr body, const vector<int>& joint_inds, const Eigen::MatrixXd& traj,
+void OSGViewer::AnimateKinBody(KinBodyPtr body, const vector<int>& joint_inds,
+                               const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& traj,
                                const double dt) {
   if (joint_inds.size() != traj.cols()) {
     PRINT_AND_THROW("[AnimateKinBody] DOF mismatch. "

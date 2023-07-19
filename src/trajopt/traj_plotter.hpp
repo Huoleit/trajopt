@@ -8,9 +8,10 @@ struct TRAJOPT_API TrajPlotter {
   VarArray m_trajvars;
   vector<PlotterPtr> m_plotters;
   std::set<KinBody::LinkPtr> m_links;  // links for which we'll plot the trajectory
-  int m_decimation;
+  int m_decimation;                    // Plot every m_decimation points
+  double m_dt;
 
-  TrajPlotter(OR::EnvironmentBasePtr env, ConfigurationPtr config, const VarArray& trajvars);
+  TrajPlotter(OR::EnvironmentBasePtr env, ConfigurationPtr config, const VarArray& trajvars, double dt = 0.1);
   void Add(const vector<CostPtr>& costs);
   void Add(const vector<ConstraintPtr>& constraints);
   void Add(const vector<PlotterPtr>& plotters);
@@ -19,6 +20,10 @@ struct TRAJOPT_API TrajPlotter {
   void OptimizerCallback(OptProb*, DblVec& x);
   void OptimizerAnimationCallback(OptProb*, DblVec& x);
   void SetDecimation(int dec) { m_decimation = dec; }
+
+ private:
+  void PlotBodyTrajectory(std::vector<OpenRAVE::GraphHandlePtr>& handles, OpenRAVE::KinBodyPtr body,
+                          const TrajArray& traj) const;
 };
 typedef boost::shared_ptr<TrajPlotter> TrajPlotterPtr;
 

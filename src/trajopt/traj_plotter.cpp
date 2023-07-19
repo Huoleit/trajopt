@@ -10,8 +10,8 @@ using namespace std;
 
 namespace trajopt {
 
-TrajPlotter::TrajPlotter(OR::EnvironmentBasePtr env, ConfigurationPtr config, const VarArray& trajvars)
-    : m_env(env), m_config(config), m_trajvars(trajvars), m_decimation(1) {}
+TrajPlotter::TrajPlotter(OR::EnvironmentBasePtr env, ConfigurationPtr config, const VarArray& trajvars, double dt)
+    : m_env(env), m_config(config), m_trajvars(trajvars), m_dt(dt), m_decimation(1.0 / dt) {}
 
 void TrajPlotter::Add(const vector<CostPtr>& costs) {
   BOOST_FOREACH (const CostPtr& cost, costs) {
@@ -43,30 +43,11 @@ void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
   vector<GraphHandlePtr> handles;
 
   MatrixXd traj = getTraj(x, m_trajvars);
-  vector<KinBodyPtr> bodies = m_config->GetBodies();
-  vector<Eigen::MatrixXf> linktrajs(m_links.size(), Eigen::MatrixXf(traj.rows(), 3));
-  for (int i = 0; i < traj.rows(); ++i) {
-    m_config->SetDOFValues(toDblVec(traj.row(i)));
-    if (i % m_decimation == 0) {
-      BOOST_FOREACH (const KinBodyPtr& body, bodies) {
-        handles.push_back(viewer->PlotKinBody(body));
-        SetTransparency(handles.back(), .35);
-      }
-    }
-    int iLink = 0;
-    BOOST_FOREACH (const KinBody::LinkPtr& link, m_links) {
-      OR::Vector p = link->GetTransform().trans;
-      linktrajs[iLink].row(i) = Eigen::Vector3f(p.x, p.y, p.z);
-      ++iLink;
-    }
-  }
+  KinBodyPtr body = m_config->GetBodies().front();
+
+  PlotBodyTrajectory(handles, body, traj);
 
   BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }
-
-  BOOST_FOREACH (Eigen::MatrixXf& linktraj, linktrajs) {
-    handles.push_back(m_env->drawlinestrip(linktraj.data(), linktraj.rows(), linktraj.cols() * sizeof(float), 2,
-                                           RaveVectorf(1, 0, 0, 1)));
-  }
 
   viewer->Idle();
 }
@@ -75,35 +56,42 @@ void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x) {
   OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
   vector<GraphHandlePtr> handles;
 
-  MatrixXd traj = getTraj(x, m_trajvars);
+  TrajArray traj = getTraj(x, m_trajvars);
   KinBodyPtr body = m_config->GetBodies().front();
   vector<int> joint_inds = m_config->GetJointIndices();
 
-  vector<Eigen::MatrixXf> linktrajs(m_links.size(), Eigen::MatrixXf(traj.rows(), 3));
+  PlotBodyTrajectory(handles, body, traj);
+
+  BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }  // Other plot function
+
+  viewer->AnimateKinBody(body, joint_inds, traj, m_dt);
+
+  viewer->Idle();
+}
+
+void TrajPlotter::PlotBodyTrajectory(vector<GraphHandlePtr>& handles, KinBodyPtr body, const TrajArray& traj) const {
+  OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
+  vector<TrajArray> linktrajs(m_links.size(), TrajArray(traj.rows(), 3));
+
   for (int i = 0; i < traj.rows(); ++i) {
     m_config->SetDOFValues(toDblVec(traj.row(i)));
-    if (i % m_decimation == 0) {
+    if (i == traj.rows() - 1 || i % m_decimation == 0) {  // if last point or decimation point
       handles.push_back(viewer->PlotKinBody(body));
       SetTransparency(handles.back(), .2);
     }
     int iLink = 0;
     BOOST_FOREACH (const KinBody::LinkPtr& link, m_links) {
       OR::Vector p = link->GetTransform().trans;
-      linktrajs[iLink].row(i) = Eigen::Vector3f(p.x, p.y, p.z);
+      linktrajs[iLink].row(i) = Eigen::Vector3d(p.x, p.y, p.z);
       ++iLink;
     }
   }
 
-  BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }
-
-  BOOST_FOREACH (Eigen::MatrixXf& linktraj, linktrajs) {
-    handles.push_back(m_env->drawlinestrip(linktraj.data(), linktraj.rows(), linktraj.cols() * sizeof(float), 2,
-                                           RaveVectorf(1, 0, 0, 1)));
+  BOOST_FOREACH (TrajArray& linktraj, linktrajs) {
+    Eigen::Matrix<float, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> tmp = linktraj.cast<float>();
+    handles.push_back(
+        viewer->drawlinestrip(tmp.data(), tmp.rows(), tmp.cols() * sizeof(float), 2, RaveVectorf(1, 0, 0, 1)));
   }
-
-  viewer->AnimateKinBody(body, joint_inds, traj, 1.0);
-
-  viewer->Idle();
 }
 
 }  // namespace trajopt

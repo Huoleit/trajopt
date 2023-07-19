@@ -60,15 +60,16 @@ class TRAJOPT_API OSGViewer : public OpenRAVE::ViewerBase {
   void SetTransparency(OpenRAVE::KinBodyPtr, float alpha);
   void ToggleAllAnimation();
 
+  void AnimateKinBody(OpenRAVE::KinBodyPtr body, const std::vector<int>& joint_inds,
+                      const Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>& traj,
+                      const double dt);
+
   OpenRAVE::GraphHandlePtr PlotAxes(const OpenRAVE::Transform& T, float size);
   OpenRAVE::GraphHandlePtr PlotSphere(const OpenRAVE::Vector& x, float radius);
 
   /** copy current state of kinbody or link */
   OpenRAVE::GraphHandlePtr PlotKinBody(const OpenRAVE::KinBodyPtr);
   OpenRAVE::GraphHandlePtr PlotLink(const OpenRAVE::KinBody::LinkPtr);
-
-  void AnimateKinBody(OpenRAVE::KinBodyPtr body, const std::vector<int>& joint_inds, const Eigen::MatrixXd& traj,
-                      const double dt);
 
   struct EventHandler : public osgGA::TrackballManipulator {
     typedef std::map<int, OSGViewer::KeyCallback> KeyCallbackMap;

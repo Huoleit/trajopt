@@ -198,7 +198,7 @@ void InitInfo::fromJson(const Json::Value& v) {
     }
   } else if (type_str == "straight_line") {
     DblVec startPoint;
-    childFromJson(v, startPoint, "startPoint");
+    childFromJson(v, startPoint, "startpoint");
     if (startPoint.size() != n_dof) {
       PRINT_AND_THROW(boost::format("wrong number of dof values in initialization. expected %i got %j") % n_dof %
                       startPoint.size());
