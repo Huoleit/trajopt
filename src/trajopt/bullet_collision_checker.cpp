@@ -13,6 +13,30 @@
 #include "trajopt/collision_checker.hpp"
 #include "utils/eigen_conversions.hpp"
 #include "utils/logging.hpp"
+
+#ifdef DEBUG_BULLET_GUI
+#include <LinearMath/btIDebugDraw.h>
+
+#include <functional>
+#include <osg/Array>
+#include <osg/BlendFunc>
+#include <osg/CameraNode>
+#include <osg/Geometry>
+#include <osg/LineWidth>
+#include <osg/Material>
+#include <osg/MatrixTransform>
+#include <osg/Point>
+#include <osg/ShapeDrawable>
+#include <osg/io_utils>
+#include <osgDB/ReadFile>
+#include <osgDB/WriteFile>
+#include <osgGA/TrackballManipulator>
+#include <osgText/Font>
+#include <osgText/Text>
+#include <osgUtil/SmoothingVisitor>
+#include <osgViewer/Viewer>
+#endif
+
 using namespace util;
 using namespace std;
 using namespace trajopt;
@@ -286,6 +310,229 @@ void RenderCollisionShape(btCollisionShape* shape, const btTransform& tf, OpenRA
   }
 }
 
+#ifdef DEBUG_BULLET_GUI
+class BulletDebugGUI : public btIDebugDraw {
+ public:
+  class EventHandler : public osgGA::GUIEventHandler {
+   public:
+    typedef std::function<void(void)> KeyCallback;
+    EventHandler(KeyCallback cb) : m_cb(cb) {}
+    bool handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionAdapter& aa) override {
+      if (ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN) {
+        switch (ea.getKey()) {
+          case 'p':
+            m_cb();
+            return true;
+          default:
+            break;
+        }
+      }
+      return false;
+    }
+
+   private:
+    KeyCallback m_cb;
+  };
+
+  BulletDebugGUI() {
+    m_root = new osg::Group;
+    m_viewer.setSceneData(m_root.get());
+    AddLights(m_root);
+    m_viewer.setUpViewInWindow(0, 0, 1920, 1080);
+    m_viewer.realize();
+
+    m_viewer.getCamera()->setClearColor(osg::Vec4(0, 0, 0, 1));
+    m_camMan = new osgGA::TrackballManipulator;
+    m_viewer.setCameraManipulator(m_camMan);
+
+    m_handler = new EventHandler([this]() { m_request_stop_idling = true; });
+    m_viewer.addEventHandler(m_handler);
+
+    m_viewer.setRunFrameScheme(osgViewer::ViewerBase::ON_DEMAND);
+  }
+
+  void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override {
+    osg::Geometry* geom = new osg::Geometry;
+
+    osg::Vec3Array* osgPts = new osg::Vec3Array;
+    osgPts->push_back(osg::Vec3(from.x(), from.y(), from.z()));
+    osgPts->push_back(osg::Vec3(to.x(), to.y(), to.z()));
+    geom->setVertexArray(osgPts);
+
+    osg::StateSet* ss = geom->getOrCreateStateSet();
+    osg::LineWidth* lw = new osg::LineWidth;
+    lw->setWidth(1.0);
+    ss->setAttribute(lw);
+
+    osg::Vec4Array* osgColor = new osg::Vec4Array();
+    osgColor->push_back(osg::Vec4(color[0], color[1], color[2], 1));
+    geom->setColorArray(osgColor);
+    geom->setColorBinding(osg::Geometry::BIND_OVERALL);
+
+    geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::LINES, 0, osgPts->size()));
+
+    osg::Geode* geode = new osg::Geode();
+    geode->addDrawable(geom);
+
+    m_root->addChild(geode);
+  }
+
+  void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime,
+                        const btVector3& color) override {
+    osg::Vec3 from(PointOnB.x(), PointOnB.y(), PointOnB.z());
+    osg::Vec3 to = from + osg::Vec3(normalOnB.x(), normalOnB.y(), normalOnB.z()) * 1.0;
+    AddCylinderBetweenPoints(from, to, 2, osg::Vec4(1.0, 0.0, 0.0, 1.0), m_root, true);
+  }
+
+  void reportErrorWarning(const char* warningString) override {
+    LOG_ERROR("[Error] BulletDebugGUI: %s", warningString);
+  }
+
+  void draw3dText(const btVector3& location, const char* textString) override {
+    osg::ref_ptr<osgText::Text> text = new osgText::Text;
+    text->setColor(osg::Vec4(1.0f, 0.0f, 0.0f, 1.0f));
+    text->setCharacterSize(10.0f);
+    text->setAxisAlignment(osgText::TextBase::XY_PLANE);
+    text->setPosition(osg::Vec3(location.x(), location.y(), location.z()));
+    text->setText(textString);
+
+    osg::ref_ptr<osg::Geode> textGeode = new osg::Geode;
+    textGeode->addDrawable(text);
+
+    m_root->addChild(textGeode);
+  }
+
+  void drawTransform(const btTransform& transform, btScalar orthoLen) override {
+    // btVector3 start = transform.getOrigin();
+    // drawLine(start, start + transform.getBasis() * btVector3(orthoLen, 0, 0), btVector3(0.7f, 0, 0));
+    // drawLine(start, start + transform.getBasis() * btVector3(0, orthoLen, 0), btVector3(0, 0.7f, 0));
+    // drawLine(start, start + transform.getBasis() * btVector3(0, 0, orthoLen), btVector3(0, 0, 0.7f));
+  }
+
+  void AddLights(osg::Group* group) {
+    {
+      osg::Light* light = new osg::Light;
+      light->setLightNum(0);
+      light->setPosition(osg::Vec4(-4, 0, 4, 1));
+      osg::LightSource* lightSource = new osg::LightSource;
+      lightSource->setLight(light);
+      light->setDiffuse(osg::Vec4(1, .9, .9, 1) * .5);
+      light->setAmbient(osg::Vec4(1, 1, 1, 1) * .3);
+      light->setConstantAttenuation(0);
+      light->setLinearAttenuation(.15);
+      group->addChild(lightSource);
+      group->getOrCreateStateSet()->setMode(GL_LIGHT0, osg::StateAttribute::ON);
+    }
+
+    {
+      osg::Light* light = new osg::Light;
+      light->setLightNum(1);
+      light->setPosition(osg::Vec4(4, 0, 4, 1));
+      osg::ref_ptr<osg::LightSource> lightSource = new osg::LightSource;
+      lightSource->setLight(light);
+      light->setDiffuse(osg::Vec4(.9, .9, 1, 1) * .5);
+      light->setConstantAttenuation(0);
+      light->setLinearAttenuation(.15);
+      group->addChild(lightSource.get());
+      group->getOrCreateStateSet()->setMode(GL_LIGHT1, osg::StateAttribute::ON);
+    }
+  }
+
+  void setDebugMode(int debugMode) override { m_debugMode = debugMode; }
+  int getDebugMode() const override { return m_debugMode; }
+
+  void Draw() {
+    m_idling = true;
+    m_request_stop_idling = false;
+    printf("press p to stop idling\n");
+    while (!m_viewer.done() && !m_request_stop_idling) {
+      if (m_viewer.checkNeedToDoFrame()) m_viewer.frame();
+      usleep(.03 * 1e6);
+    }
+    m_idling = false;
+
+    // reset world
+    m_root->removeChildren(0, m_root->getNumChildren());
+  }
+
+ private:
+  // http://forum.openscenegraph.org/viewtopic.php?t=7806
+  // Copy from OSGViewer
+  void AddCylinderBetweenPoints(const osg::Vec3& StartPoint, osg::Vec3 EndPoint, float radius,
+                                const osg::Vec4& CylinderColor, osg::Group* pAddToThisGroup, bool use_cone) {
+    osg::Vec3 z = osg::Vec3(0, 0, 1);
+    osg::Vec3 p = (StartPoint - EndPoint);
+    if (p.length() == 0) {
+      //    cerr << "tried to draw a cylinder of length 0" << endl;
+      return;
+    }
+    p.normalize();
+
+    osg::Vec3 t;
+    double angle = acos((z * p));
+    if (angle < 1e-6)
+      t = z;
+    else if (M_PI - angle < 1e-6)
+      t = osg::Vec3(1, 0, 0);
+    else {
+      t = z ^ p;
+      t.normalize();
+    }
+
+    if (use_cone) {
+      osg::Vec3 pdir = p;
+      pdir.normalize();
+      EndPoint += pdir * 2 * radius;
+    }
+
+    float height = (StartPoint - EndPoint).length();
+    osg::Vec3 center = (StartPoint + EndPoint) / 2;
+
+    // This is the default direction for the cylinders to face in OpenGL
+    osg::Cylinder* cylinder = new osg::Cylinder(center, radius, height);
+    cylinder->setRotation(osg::Quat(angle, t));
+
+    osg::TessellationHints* hints = new osg::TessellationHints;
+    hints->setDetailRatio(.1);
+
+    //   A geode to hold our cylinder
+    osg::Geode* geode = new osg::Geode;
+    osg::ShapeDrawable* cylinderDrawable = new osg::ShapeDrawable(cylinder, hints);
+    geode->addDrawable(cylinderDrawable);
+
+    if (use_cone) {
+      osg::Vec3 cone_center = EndPoint;
+      float cone_radius = 2 * radius;
+      float cone_height = -2 * radius;
+      osg::Cone* cone = new osg::Cone(cone_center, cone_radius, cone_height);
+      cone->setRotation(osg::Quat(angle, t));
+      osg::ShapeDrawable* coneDrawable = new osg::ShapeDrawable(cone, hints);
+      geode->addDrawable(coneDrawable);
+
+      osg::Sphere* sphere = new osg::Sphere(StartPoint, cone_radius);
+      osg::ShapeDrawable* sphereDrawable = new osg::ShapeDrawable(sphere, hints);
+      geode->addDrawable(sphereDrawable);
+    }
+
+    //   Set the color of the cylinder that extends between the two points.
+    osg::Material* pMaterial = new osg::Material;
+    pMaterial->setDiffuse(osg::Material::FRONT, CylinderColor);
+    geode->getOrCreateStateSet()->setAttribute(pMaterial, osg::StateAttribute::OVERRIDE);
+
+    //   Add the cylinder between the two points to an existing group
+    pAddToThisGroup->addChild(geode);
+  }
+
+  osgViewer::Viewer m_viewer;
+  osg::ref_ptr<osg::Group> m_root;
+  osg::ref_ptr<osgGA::CameraManipulator> m_camMan;
+  osg::ref_ptr<EventHandler> m_handler;
+
+  bool m_idling, m_request_stop_idling;
+  int m_debugMode;
+};
+#endif
+
 class BulletCollisionChecker : public CollisionChecker {
   btCollisionWorld* m_world;
   btBroadphaseInterface* m_broadphase;
@@ -298,6 +545,10 @@ class BulletCollisionChecker : public CollisionChecker {
   typedef std::pair<const KinBody::Link*, const KinBody::Link*> LinkPair;
   set<LinkPair> m_excludedPairs;
   Eigen::Matrix<bool, Eigen::Dynamic, Eigen::Dynamic> m_allowedCollisionMatrix;
+
+#ifdef DEBUG_BULLET_GUI
+  BulletDebugGUI m_gui;
+#endif
 
  public:
   BulletCollisionChecker(OR::EnvironmentBaseConstPtr env);
@@ -395,13 +646,23 @@ BulletCollisionChecker::BulletCollisionChecker(OR::EnvironmentBaseConstPtr env) 
   m_dispatcher = new btCollisionDispatcher(m_coll_config);
   m_broadphase = new btDbvtBroadphase();
   m_world = new btCollisionWorld(m_dispatcher, m_broadphase, m_coll_config);
+#ifdef DEBUG_BULLET_GUI
+  m_gui.setDebugMode(btIDebugDraw::DBG_DrawContactPoints | btIDebugDraw::DBG_DrawAabb |
+                     btIDebugDraw::DBG_DrawWireframe);
+  m_world->setDebugDrawer(&m_gui);
+#endif
   m_dispatcher->registerCollisionCreateFunc(
       BOX_SHAPE_PROXYTYPE, BOX_SHAPE_PROXYTYPE,
       m_coll_config->getCollisionAlgorithmCreateFunc(CONVEX_SHAPE_PROXYTYPE, CONVEX_SHAPE_PROXYTYPE));
   m_dispatcher->setNearCallback(&nearCallback);
   m_dispatcher->m_userData = this;
-  SetContactDistance(.05);
+  SetContactDistance(.01);
   UpdateBulletFromRave();
+
+#ifdef DEBUG_BULLET_GUI
+  m_world->debugDrawWorld();
+  m_gui.Draw();
+#endif
 }
 
 BulletCollisionChecker::~BulletCollisionChecker() {

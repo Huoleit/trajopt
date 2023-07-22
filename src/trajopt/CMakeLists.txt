@@ -40,6 +40,10 @@ target_link_directories(trajopt PUBLIC
     ${OpenRAVE_LIBRARY_DIRS}
 )
 
+if (DEBUG_BULLET_GUI)
+  set_property(SOURCE bullet_collision_checker.cpp APPEND_STRING PROPERTY COMPILE_FLAGS " -DDEBUG_BULLET_GUI")
+endif()
+
 add_subdirectory(test)
 
 include_directories(${PYTHON_NUMPY_INCLUDE_DIR})

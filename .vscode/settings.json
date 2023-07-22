@@ -210,6 +210,39 @@
         "cameramanipulator": "cpp",
         "eventvisitor": "cpp",
         "updatevisitor": "cpp",
-        "smoothingvisitor": "cpp"
-    }
+        "smoothingvisitor": "cpp",
+        "cullvisitor": "cpp",
+        "kerningtype": "cpp",
+        "guieventhandler": "cpp",
+        "guiactionadapter": "cpp"
+    },
+    "cSpell.words": [
+        "affinedofs",
+        "coeffs",
+        "derivs",
+        "dofvals",
+        "idof",
+        "inds",
+        "Ineq",
+        "INEQ",
+        "linkstr",
+        "manip",
+        "nvalid",
+        "OPENRAVE",
+        "RAVELOG",
+        "rotationaxis",
+        "shouldnt",
+        "startpoint",
+        "timestep",
+        "traj",
+        "Traj",
+        "trajopt",
+        "TRAJOPT",
+        "trajplotter",
+        "trajvarvec",
+        "vdata",
+        "vlower",
+        "vupper",
+        "wxyz"
+    ]
 }

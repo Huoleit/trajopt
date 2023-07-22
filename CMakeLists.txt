@@ -8,7 +8,10 @@ if (DEVEL_MODE)
   set(CMAKE_CXX_FLAGS "-Werror -Wall -Wno-sign-compare")
 endif(DEVEL_MODE)
 
-set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")        
+set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")      
+
+# DEBUG_BULLET_GUI is used in bullet_collision_checker.cpp. Turn on the interal debug drawing of bullet
+set(DEBUG_BULLET_GUI ON)
 
 # http://cmake.3232098.n2.nabble.com/Default-value-for-CMAKE-BUILD-TYPE-td7550756.html
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

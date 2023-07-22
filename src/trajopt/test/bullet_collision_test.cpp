@@ -13,6 +13,7 @@ CollisionCheckerPtr cc;
 vector<GraphHandlePtr> handles;
 EnvironmentBasePtr env;
 OSGViewerPtr viewer;
+
 void PlotCollisionGeometry(const osgGA::GUIEventAdapter& ea) {
   if (handles.size() == 0) {
     cc->PlotCollisionGeometry(handles);
@@ -37,15 +38,11 @@ int main() {
   RaveInitialize(false, OpenRAVE::Level_Debug);
   env = RaveCreateEnvironment();
   env->StopSimulation();
-  //  bool success = env->Load("data/pr2test2.env.xml");
   {
-    bool success = env->Load("robots/pr2-beta-static.zae");
+    bool success = env->Load("data/pr2test2.env.xml");
     FAIL_IF_FALSE(success);
   }
-  {
-    bool success = env->Load("/workspaces/trajopt/data/test2.env.xml");
-    FAIL_IF_FALSE(success);
-  }
+
   vector<RobotBasePtr> robots;
   env->GetRobots(robots);
   RobotBasePtr robot = robots[0];
@@ -58,7 +55,6 @@ int main() {
   ManipulatorControl mc(manips[manips.size() - 1], viewer);
   DriveControl dc(robot, viewer);
   StatePrinter sp(robot);
-  viewer->AddKeyCallback('a', boost::bind(&StatePrinter::PrintAll, &sp));
   viewer->AddKeyCallback('q', &PlotCollisionGeometry);
   viewer->AddKeyCallback('=', boost::bind(&AdjustTransparency, .05));
   viewer->AddKeyCallback('-', boost::bind(&AdjustTransparency, -.05));
