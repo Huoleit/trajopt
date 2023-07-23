@@ -3,7 +3,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
-set(PROJECT_DATA_DIR "${PROJECT_SOURCE_DIR}/data")
+set(PROJECT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 configure_file (
   "${CMAKE_CURRENT_SOURCE_DIR}/get_data_dir.h.in"
