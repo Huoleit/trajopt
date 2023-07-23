@@ -3,11 +3,12 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}/include
 )
 
-set(PROJECT_DATA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
+set(PROJECT_DATA_DIR "${PROJECT_SOURCE_DIR}/data")
+set(PROJECT_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/config")
 
 configure_file (
-  "${CMAKE_CURRENT_SOURCE_DIR}/get_data_dir.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/include/get_data_dir.h" @ONLY
+  "${CMAKE_CURRENT_SOURCE_DIR}/get_dir.h.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/include/get_dir.h" @ONLY
 )
 
 add_executable(arm_cpp arm.cpp)

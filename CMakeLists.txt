@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 project(trajopt)
+
+cmake_policy(SET CMP0054 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -11,7 +13,7 @@ endif(DEVEL_MODE)
 set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")      
 
 # DEBUG_BULLET_GUI is used in bullet_collision_checker.cpp. Turn on the interal debug drawing of bullet
-set(DEBUG_BULLET_GUI ON)
+set(DEBUG_BULLET_GUI OFF CACHE BOOL "Turn on the interal debug drawing of bullet" FORCE)
 
 # http://cmake.3232098.n2.nabble.com/Default-value-for-CMAKE-BUILD-TYPE-td7550756.html
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -65,6 +67,7 @@ include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
 
 SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
 
+include(GoogleTest)
 
 add_subdirectory(ext)
 add_subdirectory(src)

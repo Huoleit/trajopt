@@ -1,6 +1,6 @@
 #include <openrave-core.h>
 
-#include "get_data_dir.h"
+#include "get_dir.h"
 #include "osgviewer/osgviewer.hpp"
 #include "osgviewer/robot_ui.hpp"
 #include "sco/optimizers.hpp"
@@ -55,7 +55,7 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getDataPath() + "/time_optimal.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/time_optimal.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));

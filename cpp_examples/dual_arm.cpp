@@ -1,6 +1,6 @@
 #include <openrave-core.h>
 
-#include "get_data_dir.h"
+#include "get_dir.h"
 #include "osgviewer/osgviewer.hpp"
 #include "osgviewer/robot_ui.hpp"
 #include "sco/optimizers.hpp"
@@ -55,23 +55,24 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getDataPath() + "/time_optimal.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
   TrajOptProbPtr prob = ConstructProblem(pci);
 
   BasicTrustRegionSQP opt(prob);
-  TrajPlotter plotter(env, pci.rad, prob->GetVars());
+  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
 
   plotter.Add(prob->getCosts());
   plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
-  opt.addCallback(boost::bind(&TrajPlotter::OptimizerAnimationCallback, boost::ref(plotter), _1, _2));
-
-  cerr << "Inital Traj: \n" << prob->GetInitTraj() << endl;
+  // plotter.AddAnimation(prob->GetObstacleRad(), &prob->GetObstacleRadTraj());
+  opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
+
+  // plotter.OptimizerAnimationCallback(prob.get(), opt.x());
 
   viewer.reset();
   env.reset();

@@ -2,7 +2,7 @@
 
 #include <Eigen/Core>
 
-#include "get_data_dir.h"
+#include "get_dir.h"
 #include "osgviewer/osgviewer.hpp"
 #include "sco/optimizers.hpp"
 #include "trajopt/common.hpp"
@@ -48,7 +48,7 @@ int main() {
   robot->SetDOFValues(DblVec(robot->GetDOF(), 0));
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getDataPath() + "/get_feasible_no_collision.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/get_feasible_no_collision.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
@@ -61,7 +61,9 @@ int main() {
 
   TrajArray traj = getTraj(opt.x(), prob->GetVars());
   viewer->AnimateKinBody(pci.rad->GetRobot(), pci.rad->GetJointIndices(), traj, pci.basic_info.dt);
-  cout << "traj: \n" << traj << endl;
+
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "],");
+  cout << "traj: \n" << traj.format(CleanFmt) << endl;
 
   try {
     viewer->Idle();
