@@ -45,8 +45,15 @@ enum TermType { TT_COST, TT_CNT };
 class TRAJOPT_API TrajOptProb : public OptProb {
  public:
   TrajOptProb();
-  TrajOptProb(int n_steps, ConfigurationPtr rad);
+  TrajOptProb(int n_steps, ConfigurationPtr rad, double dt);
   ~TrajOptProb() {}
+
+  void SetObstacleRad(ConfigurationPtr obstacleRad) { m_obstacleRad = obstacleRad; }
+  void SetObstacleRadTraj(const TrajArray& traj);
+  ConfigurationPtr GetObstacleRad() const { return m_obstacleRad; }
+  const TrajArray& GetObstacleRadTraj() const { return m_obstacleRad_traj; }
+  TrajArray& GetObstacleRadTraj() { return m_obstacleRad_traj; }
+
   VarVector GetVarRow(int i) { return m_traj_vars.row(i); }
   Var& GetVar(int i, int j) { return m_traj_vars.at(i, j); }
   VarArray& GetVars() { return m_traj_vars; }
@@ -63,10 +70,16 @@ class TRAJOPT_API TrajOptProb : public OptProb {
   friend TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo&);
 
  private:
+  double m_dt;
+
   VarArray m_traj_vars;
   ConfigurationPtr m_rad;
+
   TrajArray m_init_traj;
   TrajPlotterPtr m_trajplotter;
+
+  ConfigurationPtr m_obstacleRad;
+  TrajArray m_obstacleRad_traj;
 };
 
 void TRAJOPT_API SetupPlotting(TrajOptProb& prob, Optimizer& opt);
@@ -85,6 +98,15 @@ struct BasicInfo {
   double dt;
   string robot;       // optional
   IntVec dofs_fixed;  // optional
+
+  string obstacle_manip;  // optional
+  void fromJson(const Json::Value& v);
+};
+
+struct ObstacleArmInfo {
+  enum Type { LOOP = 0, STOP };
+  Type type;
+  TrajArray data;  // obstacle trajectory
   void fromJson(const Json::Value& v);
 };
 
@@ -136,14 +158,16 @@ This object holds all the data that's read from the JSON document
 struct TRAJOPT_API ProblemConstructionInfo {
  public:
   BasicInfo basic_info;
+  ObstacleArmInfo obstacle_info;
   vector<TermInfoPtr> cost_infos;
   vector<TermInfoPtr> cnt_infos;
   InitInfo init_info;
 
   OR::EnvironmentBasePtr env;
   RobotAndDOFPtr rad;
+  RobotAndDOFPtr obstacleRad;
 
-  ProblemConstructionInfo(OR::EnvironmentBasePtr _env) : env(_env) {}
+  ProblemConstructionInfo(OR::EnvironmentBasePtr _env) : env(_env), obstacleRad(nullptr) {}
   void fromJson(const Value& v);
 };
 

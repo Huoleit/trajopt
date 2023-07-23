@@ -2,6 +2,7 @@
 using namespace OpenRAVE;
 #include <Eigen/Core>
 #include <boost/foreach.hpp>
+#include <iostream>
 
 #include "typedefs.hpp"
 #include "utils/logging.hpp"
@@ -50,7 +51,7 @@ RobotBasePtr GetRobot(EnvironmentBase& env) {
   } else if (robots.size() == 1) {
     return robots[0];
   } else {
-    LOG_ERROR("I don't know which robot you want");
+    PRINT_AND_THROW("I don't know which robot you want");
     return RobotBasePtr();
   }
 }

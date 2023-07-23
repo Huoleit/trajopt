@@ -20,6 +20,8 @@ class TRAJOPT_API Configuration {
   virtual std::vector<KinBody::LinkPtr> GetAffectedLinks() = 0;
   virtual void GetAffectedLinks(std::vector<KinBody::LinkPtr>& links, bool only_with_geom, vector<int>& link_inds) = 0;
   virtual DblVec RandomDOFValues() = 0;
+  virtual OpenRAVE::Transform GetEETransform() { return OpenRAVE::Transform(); }
+
   virtual ~Configuration() {}
   struct Saver {
     virtual ~Saver() {}
@@ -59,6 +61,7 @@ class TRAJOPT_API RobotAndDOF : public Configuration {
   std::vector<KinBody::LinkPtr> GetAffectedLinks();
   void GetAffectedLinks(std::vector<KinBody::LinkPtr>& links, bool only_with_geom, vector<int>& link_inds);
   DblVec RandomDOFValues();
+  OpenRAVE::Transform GetEETransform() override;
 
   struct RobotSaver : public Saver {
     OpenRAVE::KinBody::KinBodyStateSaver saver;

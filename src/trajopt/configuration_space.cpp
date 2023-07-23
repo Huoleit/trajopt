@@ -151,4 +151,12 @@ DblVec RobotAndDOF::RandomDOFValues() {
   return out;
 }
 
+OpenRAVE::Transform RobotAndDOF::GetEETransform() {
+  int index = *std::max_element(joint_inds.begin(), joint_inds.end());
+  return robot->GetJointFromDOFIndex(index)->GetHierarchyChildLink()->GetTransform();
+  // Fake EE. I assume direct child link attached to the joint with the maximum index is the EE.
+  // But it is generally not true for all robots. This function is only used to determine where to plot a kinoBody. I am
+  // too lazy to modify the code. Just keep it as it is for now.
+}
+
 }  // namespace trajopt

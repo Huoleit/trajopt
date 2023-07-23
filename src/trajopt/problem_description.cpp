@@ -1,5 +1,6 @@
 #include "trajopt/problem_description.hpp"
 
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 
@@ -122,7 +123,47 @@ void BasicInfo::fromJson(const Json::Value& v) {
   childFromJson(v, dt, "dt", 0.1);
   childFromJson(v, robot, "robot", string(""));
   childFromJson(v, dofs_fixed, "dofs_fixed", IntVec());
+  childFromJson(v, obstacle_manip, "obstacle_manip", string(""));
   // TODO: optimization parameters, etc?
+}
+
+void ObstacleArmInfo::fromJson(const Json::Value& v) {
+  unsigned int n_dof = gPCI->obstacleRad->GetDOF();
+  unsigned int n_steps = gPCI->basic_info.n_steps;
+
+  if (!v.isMember("data")) PRINT_AND_THROW("obstacle_manip specified but no data inside obstacle_traj is given");
+
+  const Value& traj = v["data"];
+
+  string type_str;
+  childFromJson(v, type_str, "type", string("loop"));
+
+  data.resize(n_steps, n_dof);
+
+  for (int i = 0; i < std::min(traj.size(), n_steps); ++i) {
+    DblVec row;
+    fromJsonArray(traj[i], row, n_dof);
+    data.row(i) = toVectorXd(row);
+  }
+
+  if (traj.size() < n_steps) {
+    if (type_str == "loop") {
+      int repeat = n_steps / traj.size();
+      int remainder = n_steps % traj.size();
+
+      for (int i = 1; i < repeat; ++i) {
+        data.middleRows(i * traj.size(), traj.size()) = data.topRows(traj.size());
+      }
+
+      if (remainder > 0) {
+        data.bottomRows(remainder) = data.topRows(remainder);
+      }
+    } else if (type_str == "stop") {
+      data.bottomRows(n_steps - traj.size()) = data.row(traj.size() - 1).replicate(n_steps - traj.size(), 1);
+    } else {
+      PRINT_AND_THROW(boost::format("invalid type: %s") % type_str);
+    }
+  }
 }
 
 ////
@@ -231,6 +272,17 @@ void ProblemConstructionInfo::fromJson(const Value& v) {
   }
 
   gPCI = this;
+  if (basic_info.obstacle_manip != "") {
+    obstacleRad = RADFromName(basic_info.obstacle_manip, robot);
+    if (!obstacleRad) {
+      PRINT_AND_THROW(boost::format("couldn't get manip %s") % basic_info.obstacle_manip);
+    }
+    if (!v.isMember("obstacle_traj")) {
+      PRINT_AND_THROW("obstacle_manip specified but no obstacle_traj given");
+    }
+    obstacle_info.fromJson(v["obstacle_traj"]);
+  }
+
   gReadingCosts = true;
   gReadingConstraints = false;
   if (v.isMember("costs")) fromJsonArray(v["costs"], cost_infos);
@@ -268,7 +320,7 @@ TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo& pci) {
   const BasicInfo& bi = pci.basic_info;
   int n_steps = bi.n_steps;
 
-  TrajOptProbPtr prob(new TrajOptProb(n_steps, pci.rad));
+  TrajOptProbPtr prob(new TrajOptProb(n_steps, pci.rad, bi.dt));
   int n_dof = prob->m_rad->GetDOF();
 
   DblVec cur_dofvals = prob->m_rad->GetDOFValues();
@@ -292,6 +344,11 @@ TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo& pci) {
     }
   }
 
+  if (pci.obstacleRad != nullptr) {
+    prob->SetObstacleRad(pci.obstacleRad);
+    prob->SetObstacleRadTraj(pci.obstacle_info.data);
+  }
+
   BOOST_FOREACH (const TermInfoPtr& ci, pci.cost_infos) { ci->hatch(*prob); }
   BOOST_FOREACH (const TermInfoPtr& ci, pci.cnt_infos) { ci->hatch(*prob); }
 
@@ -305,7 +362,7 @@ TrajOptProbPtr ConstructProblem(const Json::Value& root, OpenRAVE::EnvironmentBa
   return ConstructProblem(pci);
 }
 
-TrajOptProb::TrajOptProb(int n_steps, ConfigurationPtr rad) : m_rad(rad) {
+TrajOptProb::TrajOptProb(int n_steps, ConfigurationPtr rad, double dt) : m_rad(rad), m_dt(dt) {
   DblVec lower, upper;
   m_rad->GetDOFLimits(lower, upper);
   int n_dof = m_rad->GetDOF();
@@ -328,10 +385,25 @@ TrajOptProb::TrajOptProb(int n_steps, ConfigurationPtr rad) : m_rad(rad) {
   VarVector trajvarvec = createVariables(names, vlower, vupper);
   m_traj_vars = VarArray(n_steps, n_dof, trajvarvec.data());
 
-  m_trajplotter.reset(new TrajPlotter(m_rad->GetEnv(), m_rad, m_traj_vars));
+  m_trajplotter.reset(new TrajPlotter(m_rad->GetEnv(), m_rad, m_traj_vars, m_dt));
 }
 
 TrajOptProb::TrajOptProb() {}
+
+void TrajOptProb::SetObstacleRadTraj(const TrajArray& traj) {
+  if (m_obstacleRad == nullptr) {
+    throw std::runtime_error("[TrajOptProb::SetObstacleRadTraj]Obstacle robot is not initialized");
+  }
+  if (traj.rows() != m_traj_vars.rows()) {
+    throw std::runtime_error(
+        "[TrajOptProb::SetObstacleRadTraj]Obstacle trajectory size does not match the trajectory size");
+  }
+  if (traj.cols() != m_obstacleRad->GetDOF()) {
+    throw std::runtime_error("[TrajOptProb::SetObstacleRadTraj]Obstacle trajectory size does not match the robot size");
+  }
+
+  m_obstacleRad_traj = traj;
+}
 
 void SetupPlotting(TrajOptProb& prob, Optimizer& opt) {
   TrajPlotterPtr plotter = prob.GetPlotter();
