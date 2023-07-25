@@ -28,12 +28,20 @@ vector<double> GetDOFValues(const OR::RobotBase::Manipulator& manip) {
   return vals;
 }
 
-ManipulatorControl::ManipulatorControl(OpenRAVE::RobotBase::ManipulatorPtr manip, OSGViewerPtr viewer)
-    : m_manip(manip), m_viewer(viewer) {
+ManipulatorControl::ManipulatorControl(OpenRAVE::RobotBase::ManipulatorPtr manip, OSGViewerPtr viewer, bool isActive)
+    : m_manip(manip), m_viewer(viewer), m_isActive(isActive) {
   viewer->AddMouseCallback(boost::bind(&ManipulatorControl::ProcessMouseInput, this, _1));
 }
 
 bool ManipulatorControl::ProcessMouseInput(const osgGA::GUIEventAdapter& ea) {
+  if (ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN) {
+    if (ea.getKey() == osgGA::GUIEventAdapter::KEY_T) {
+      m_isActive = !m_isActive;
+    }
+  }
+
+  if (!m_isActive) return false;
+
   if (ea.getEventType() == osgGA::GUIEventAdapter::PUSH) {
     lastX = ea.getX();
     lastY = ea.getY();
@@ -75,6 +83,7 @@ bool ManipulatorControl::ProcessMouseInput(const osgGA::GUIEventAdapter& ea) {
     if (iksoln.empty()) {
       cerr << "no ik solution found" << endl;
     } else {
+      cout << m_manip->GetName() << ": ";
       for (auto i : iksoln) {
         cout << i << ", ";
       }
@@ -87,7 +96,8 @@ bool ManipulatorControl::ProcessMouseInput(const osgGA::GUIEventAdapter& ea) {
   return false;
 }
 
-DriveControl::DriveControl(OpenRAVE::RobotBasePtr robot, OSGViewerPtr viewer) : m_robot(robot), m_viewer(viewer) {
+DriveControl::DriveControl(OpenRAVE::RobotBasePtr robot, OSGViewerPtr viewer, bool printState)
+    : m_robot(robot), m_viewer(viewer), m_printState(printState) {
   viewer->AddKeyCallback(osgGA::GUIEventAdapter::KEY_Left, boost::bind(&DriveControl::MoveRobot, this, 0, .05, 0));
   viewer->AddKeyCallback(osgGA::GUIEventAdapter::KEY_Right, boost::bind(&DriveControl::MoveRobot, this, 0, -.05, 0));
   viewer->AddKeyCallback(osgGA::GUIEventAdapter::KEY_Up, boost::bind(&DriveControl::MoveRobot, this, .05, 0, 0));
@@ -103,21 +113,24 @@ void DriveControl::MoveRobot(float dx, float dy, float dtheta) {
   T.trans += OpenRAVE::Vector(dx, dy, 0);
   T.rot = OpenRAVE::geometry::quatMultiply(T.rot, OpenRAVE::Vector(1, 0, 0, dtheta / 2));
   T.rot.normalize4();
-  cout << "rotation " << T.rot << endl;
+  if (m_printState) {
+    cout << "rotation " << T.rot << "  "
+         << "translation " << T.trans << endl;
+  }
   m_robot->SetTransform(T);
   m_viewer->UpdateSceneData();
 }
 
 void StatePrinter::PrintAll() {
-  cout << "joints: " << endl;
+  cout << "\033[33mjoints: \033[0m" << endl;
   BOOST_FOREACH (const OR::KinBody::JointPtr& joint, m_robot->GetJoints()) {
     cout << joint->GetName() << ": " << Str(joint->GetValue(0)) << endl;
   }
   vector<double> dofvals;
   m_robot->GetDOFValues(dofvals);
-  cout << "all dof vals: " << Str(dofvals) << endl;
-  cout << "transform: " << m_robot->GetTransform() << endl;
-  cout << "links: " << endl;
+  cout << "\033[33mall dof vals: \033[0m" << Str(dofvals) << endl;
+  cout << "\033[33mtransform: \033[0m" << m_robot->GetTransform() << endl;
+  cout << "\033[33mlinks: \033[0m" << endl;
   BOOST_FOREACH (const OR::KinBody::LinkPtr& link, m_robot->GetLinks()) {
     cout << link->GetName() << ": " << link->GetTransform() << endl;
   }
