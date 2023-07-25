@@ -20,3 +20,6 @@ add_test(cast-cost-unit ${CMAKE_BINARY_DIR}/bin/cast-cost-unit)
 add_executable(bullet_collision_test bullet_collision_test.cpp)
 target_link_libraries(bullet_collision_test trajopt osgviewer)
 # add_test(cast-cost-unit ${CMAKE_BINARY_DIR}/bin/cast-cost-unit)
+
+add_executable(test_dualarm_collision test_dualarm_collision.cpp)
+target_link_libraries(test_dualarm_collision trajopt osgviewer)

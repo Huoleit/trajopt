@@ -57,7 +57,7 @@ void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
   viewer->Idle();
 }
 
-void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x) {
+void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody) {
   OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
   vector<GraphHandlePtr> handles;
 
@@ -65,7 +65,7 @@ void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x) {
   KinBodyPtr body = m_config->GetBodies().front();
   vector<int> joint_inds = m_config->GetJointIndices();
 
-  PlotBodyTrajectory(handles, body, traj);
+  if (plotBody) PlotBodyTrajectory(handles, body, traj);
 
   BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }  // Other plot function
 

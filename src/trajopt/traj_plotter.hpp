@@ -22,7 +22,7 @@ struct TRAJOPT_API TrajPlotter {
   void AddLink(OpenRAVE::KinBody::LinkPtr link);
   void AddAnimation(ConfigurationPtr rad, TrajArray* trajPtr);
   void OptimizerCallback(OptProb*, DblVec& x);
-  void OptimizerAnimationCallback(OptProb*, DblVec& x);
+  void OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody = true);
   void SetDecimation(int dec) { m_decimation = dec; }
 
  private:

@@ -11,7 +11,7 @@
 
 namespace trajopt {
 
-enum CastCollisionType { CCType_None, CCType_Time0, CCType_Time1, CCType_Between };
+enum CastCollisionType { CCType_None = 0, CCType_Time0, CCType_Time1, CCType_Between };
 
 struct Collision {
   const OR::KinBody::Link* linkA;
@@ -60,6 +60,9 @@ class TRAJOPT_API CollisionChecker : public OR::UserData {
   virtual double GetContactDistance() = 0;
 
   virtual void PlotCollisionGeometry(vector<OpenRAVE::GraphHandlePtr>&) { throw std::runtime_error("not implemented"); }
+  virtual void PlotCollisionGeometryByLink(OpenRAVE::KinBody::Link* link, vector<OpenRAVE::GraphHandlePtr>& handles) {
+    throw std::runtime_error("not implemented");
+  }
 
   virtual void ContinuousCheckTrajectory(const TrajArray& traj, Configuration& rad, vector<Collision>& collisions) {
     throw std::runtime_error("not implemented");

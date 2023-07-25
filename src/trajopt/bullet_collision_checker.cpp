@@ -217,7 +217,7 @@ btCollisionShape* createShapePrimitive(OR::KinBody::Link::GeometryPtr geom, bool
 }
 
 COWPtr CollisionObjectFromLink(OR::KinBody::LinkPtr link, bool useTrimesh) {
-  LOG_DEBUG("creating bt collision object from from %s", link->GetName().c_str());
+  LOG_DEBUG("creating bt collision object from %s", link->GetName().c_str());
 
   const std::vector<boost::shared_ptr<OpenRAVE::KinBody::Link::Geometry> >& geometries = link->GetGeometries();
 
@@ -299,7 +299,7 @@ void RenderCollisionShape(btCollisionShape* shape, const btTransform& tf, OpenRA
         for (int i = 0; i < tverts.size(); ++i) tverts[i] = tf * hr.m_OutputVertices[i];
 
         handles.push_back(env.drawtrimesh((float*)&tverts[0], 16, (int*)&hr.m_Indices[0], hr.mNumFaces,
-                                          OR::RaveVector<float>(1, 1, 1, .1)));
+                                          OR::RaveVector<float>(0.929, 0.604, 0.055, 0.6)));
       }
       break;
     }
@@ -336,8 +336,10 @@ class BulletDebugGUI : public btIDebugDraw {
 
   BulletDebugGUI() {
     m_root = new osg::Group;
+    m_root->addChild(new osg::Group);  // immutable scene data
+    AddLights(m_root->getChild(0)->asGroup());
+
     m_viewer.setSceneData(m_root.get());
-    AddLights(m_root);
     m_viewer.setUpViewInWindow(0, 0, 1920, 1080);
     m_viewer.realize();
 
@@ -452,7 +454,7 @@ class BulletDebugGUI : public btIDebugDraw {
     m_idling = false;
 
     // reset world
-    m_root->removeChildren(0, m_root->getNumChildren());
+    m_root->removeChildren(1, m_root->getNumChildren() - 1);  // remove all but first child
   }
 
  private:
@@ -558,6 +560,7 @@ class BulletCollisionChecker : public CollisionChecker {
   virtual void SetContactDistance(float distance);
   virtual double GetContactDistance() { return m_contactDistance; }
   virtual void PlotCollisionGeometry(vector<OpenRAVE::GraphHandlePtr>& handles);
+  void PlotCollisionGeometryByLink(OpenRAVE::KinBody::Link* link, vector<OpenRAVE::GraphHandlePtr>& handles) override;
   virtual void ExcludeCollisionPair(const KinBody::Link& link0, const KinBody::Link& link1) {
     m_excludedPairs.insert(LinkPair(&link0, &link1));
     COW *cow0 = GetCow(&link0), *cow1 = GetCow(&link1);
@@ -658,11 +661,6 @@ BulletCollisionChecker::BulletCollisionChecker(OR::EnvironmentBaseConstPtr env) 
   m_dispatcher->m_userData = this;
   SetContactDistance(.01);
   UpdateBulletFromRave();
-
-#ifdef DEBUG_BULLET_GUI
-  m_world->debugDrawWorld();
-  m_gui.Draw();
-#endif
 }
 
 BulletCollisionChecker::~BulletCollisionChecker() {
@@ -737,6 +735,8 @@ void BulletCollisionChecker::LinksVsAll(const vector<KinBody::LinkPtr>& links, v
 
 void BulletCollisionChecker::LinkVsAll(const KinBody::Link& link, vector<Collision>& collisions, short filterMask) {
   UpdateBulletFromRave();
+  m_world->updateAabbs();
+
   LinkVsAll_NoUpdate(link, collisions, filterMask);
 }
 
@@ -877,6 +877,20 @@ void BulletCollisionChecker::PlotCollisionGeometry(vector<OpenRAVE::GraphHandleP
     RenderCollisionShape(objs[i]->getCollisionShape(), objs[i]->getWorldTransform(),
                          *boost::const_pointer_cast<OpenRAVE::EnvironmentBase>(m_env), handles);
   }
+}
+
+void BulletCollisionChecker::PlotCollisionGeometryByLink(KinBody::Link* link,
+                                                         vector<OpenRAVE::GraphHandlePtr>& handles) {
+  UpdateBulletFromRave();
+  // Get cow
+  CollisionObjectWrapper* cow = GetCow(link);
+  if (cow == nullptr) {
+    LOG_WARN("no collision object for link %s", link->GetName().c_str());
+    return;
+  }
+
+  RenderCollisionShape(cow->getCollisionShape(), cow->getWorldTransform(),
+                       *boost::const_pointer_cast<OpenRAVE::EnvironmentBase>(m_env), handles);
 }
 
 ////////// Continuous collisions ////////////////////////
@@ -1178,7 +1192,7 @@ void BulletCollisionChecker::CheckShapeCast(btCollisionShape* shape, const btTra
     obj->setWorldTransform(tf0);
     obj->m_index = cow->m_index;
     CastCollisionCollector cc(collisions, obj, this);
-    cc.m_collisionFilterMask = KinBodyFilter;
+    cc.m_collisionFilterMask = -1;  // Allow all collisions
     // cc.m_collisionFilterGroup = cow->m_collisionFilterGroup;
     world->contactTest(obj, cc);
     delete obj;
