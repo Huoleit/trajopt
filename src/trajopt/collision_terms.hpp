@@ -13,7 +13,7 @@ struct CollisionEvaluator {
   virtual void CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) = 0;
   virtual void CalcDists(const DblVec& x, DblVec& exprs) = 0;
   virtual void CalcCollisions(const DblVec& x, vector<Collision>& collisions) = 0;
-  void GetCollisionsCached(const DblVec& x, vector<Collision>&);
+  virtual void GetCollisionsCached(const DblVec& x, vector<Collision>&);
   virtual ~CollisionEvaluator() {}
   virtual VarVector GetVars() = 0;
 
@@ -67,12 +67,73 @@ struct CastCollisionEvaluator : public CollisionEvaluator {
   short m_filterMask;
 };
 
+struct SingleTimestepDualArmCollisionEvaluator : public CollisionEvaluator {
+ public:
+  typedef CollisionEvaluator Base;
+
+  SingleTimestepDualArmCollisionEvaluator(ConfigurationPtr rad, const VarVector& vars, ConfigurationPtr obstacleRad,
+                                          const DblVec& obstacleRadConfiguration);
+
+  void CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) override;
+  void CalcDists(const DblVec& x, DblVec& exprs) override;
+  void CalcCollisions(const DblVec& x, vector<Collision>& collisions) override;
+  void GetCollisionsCached(const DblVec& x, vector<Collision>& collisions) override;
+
+  VarVector GetVars() override { return m_vars; }
+
+  OR::EnvironmentBasePtr m_env;
+  CollisionCheckerPtr m_cc;
+  ConfigurationPtr m_rad;
+  VarVector m_vars;
+  Link2Int m_link2ind;
+  vector<OR::KinBody::LinkPtr> m_links;
+  short m_filterMask;
+
+  ConfigurationPtr m_obstacleRad;
+  DblVec m_obstacleConfiguration;
+};
+
+struct CastDualArmCollisionEvaluator : public CollisionEvaluator {
+ public:
+  typedef CollisionEvaluator Base;
+
+  CastDualArmCollisionEvaluator(ConfigurationPtr primaryRad, const VarVector& vars0, const VarVector& vars1,
+                                ConfigurationPtr obstacleRad, const DblVec& obstacleRadConfiguration);
+  void CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) override;
+  void CalcDists(const DblVec& x, DblVec& exprs) override;
+  void CalcCollisions(const DblVec& x, vector<Collision>& collisions) override;
+  void GetCollisionsCached(const DblVec& x, vector<Collision>& collisions) override;
+  VarVector GetVars() override { return concat(m_vars0, m_vars1); }
+
+  // parameters:
+
+  OR::EnvironmentBasePtr m_env;
+  CollisionCheckerPtr m_cc;
+  ConfigurationPtr m_rad;
+
+  VarVector m_vars0;
+  VarVector m_vars1;
+  typedef std::map<const OR::KinBody::Link*, int> Link2Int;
+  Link2Int m_link2ind;
+  vector<OR::KinBody::LinkPtr> m_links;
+  short m_filterMask;
+
+  ConfigurationPtr m_obstacleRad;
+  DblVec m_obstacleConfiguration;
+};
+
 class TRAJOPT_API CollisionCost : public Cost, public Plotter {
  public:
   /* constructor for single timestep */
   CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars);
+  /* constructor for single timestep dual arm collision cost */
+  CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars,
+                ConfigurationPtr obstacleRad, const DblVec& obstacleRadConfiguration);
   /* constructor for cast cost */
   CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars0, const VarVector& vars1);
+  /* Construct for dual arm cast cost*/
+  CollisionCost(double dist_pen, double coeff, ConfigurationPtr primaryRad, const VarVector& vars0,
+                const VarVector& vars1, ConfigurationPtr obstacleRad, const DblVec& obstacleRadConfiguration);
   virtual ConvexObjectivePtr convex(const vector<double>& x, Model* model);
   virtual double value(const vector<double>&);
   void Plot(const DblVec& x, OR::EnvironmentBase& env, std::vector<OR::GraphHandlePtr>& handles);

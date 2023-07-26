@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "sco/expr_op_overloads.hpp"
 #include "sco/expr_ops.hpp"
@@ -405,6 +406,10 @@ void TrajOptProb::SetObstacleRadTraj(const TrajArray& traj) {
   m_obstacleRad_traj = traj;
 }
 
+DblVec TrajOptProb::GetObstacleRadTrajRow(int i) {
+  return toDblVec(m_obstacleRad_traj.row(i));
+}
+
 void SetupPlotting(TrajOptProb& prob, Optimizer& opt) {
   TrajPlotterPtr plotter = prob.GetPlotter();
   plotter->Add(prob.getCosts());
@@ -420,6 +425,7 @@ void PoseCostInfo::fromJson(const Value& v) {
   childFromJson(params, wxyz, "wxyz");
   childFromJson(params, pos_coeffs, "pos_coeffs", (Vector3d)Vector3d::Ones());
   childFromJson(params, rot_coeffs, "rot_coeffs", (Vector3d)Vector3d::Ones());
+  childFromJson(params, duration, "duration", 1);
 
   string linkstr;
   childFromJson(params, linkstr, "link");
@@ -428,14 +434,17 @@ void PoseCostInfo::fromJson(const Value& v) {
     PRINT_AND_THROW(boost::format("invalid link name: %s") % linkstr);
   }
 
-  const char* all_fields[] = {"timestep", "xyz", "wxyz", "pos_coeffs", "rot_coeffs", "link"};
+  const char* all_fields[] = {"timestep", "duration", "xyz", "wxyz", "pos_coeffs", "rot_coeffs", "link"};
   ensure_only_members(params, all_fields, sizeof(all_fields) / sizeof(char*));
 }
 
 void PoseCostInfo::hatch(TrajOptProb& prob) {
   VectorOfVectorPtr f(new CartPoseErrCalculator(toRaveTransform(wxyz, xyz), prob.GetRAD(), link));
   if (term_type == TT_COST) {
-    prob.addCost(CostPtr(new CostFromErrFunc(f, prob.GetVarRow(timestep), concat(rot_coeffs, pos_coeffs), ABS, name)));
+    for (int i = 0; i < duration; ++i) {
+      prob.addCost(CostPtr(new CostFromErrFunc(f, prob.GetVarRow(timestep + i), concat(rot_coeffs, pos_coeffs), ABS,
+                                               name + "_" + boost::lexical_cast<string>(i))));
+    }
   } else if (term_type == TT_CNT) {
     prob.addConstraint(
         ConstraintPtr(new ConstraintFromFunc(f, prob.GetVarRow(timestep), concat(rot_coeffs, pos_coeffs), EQ, name)));
@@ -581,6 +590,9 @@ void CollisionCostInfo::fromJson(const Value& v) {
   const Value& params = v["params"];
 
   int n_steps = gPCI->basic_info.n_steps;
+
+  hasObstacleArm = !gPCI->basic_info.obstacle_manip.empty();
+
   childFromJson(params, continuous, "continuous", true);
   childFromJson(params, first_step, "first_step", 0);
   childFromJson(params, last_step, "last_step", n_steps - 1);
@@ -608,16 +620,35 @@ void CollisionCostInfo::fromJson(const Value& v) {
 void CollisionCostInfo::hatch(TrajOptProb& prob) {
   if (term_type == TT_COST) {
     if (continuous) {
-      for (int i = first_step; i <= last_step - gap; ++i) {
-        prob.addCost(CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
-                                               prob.GetVarRow(i), prob.GetVarRow(i + gap))));
-        prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+      if (hasObstacleArm) {
+        for (int i = first_step; i <= last_step - gap; ++i) {
+          prob.addCost(CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
+                                                 prob.GetVarRow(i), prob.GetVarRow(i + gap), prob.GetObstacleRad(),
+                                                 prob.GetObstacleRadTrajRow(i))));
+          prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+        }
+      } else {
+        for (int i = first_step; i <= last_step - gap; ++i) {
+          prob.addCost(CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
+                                                 prob.GetVarRow(i), prob.GetVarRow(i + gap))));
+          prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+        }
       }
+
     } else {
-      for (int i = first_step; i <= last_step; ++i) {
-        prob.addCost(CostPtr(
-            new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(), prob.GetVarRow(i))));
-        prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+      if (hasObstacleArm) {
+        for (int i = first_step; i <= last_step; ++i) {
+          prob.addCost(
+              CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
+                                        prob.GetVarRow(i), prob.GetObstacleRad(), prob.GetObstacleRadTrajRow(i))));
+          prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+        }
+      } else {
+        for (int i = first_step; i <= last_step; ++i) {
+          prob.addCost(CostPtr(
+              new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(), prob.GetVarRow(i))));
+          prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
+        }
       }
     }
   } else {  // ALMOST COPIED

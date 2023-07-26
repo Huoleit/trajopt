@@ -53,6 +53,7 @@ class TRAJOPT_API TrajOptProb : public OptProb {
   ConfigurationPtr GetObstacleRad() const { return m_obstacleRad; }
   const TrajArray& GetObstacleRadTraj() const { return m_obstacleRad_traj; }
   TrajArray& GetObstacleRadTraj() { return m_obstacleRad_traj; }
+  DblVec GetObstacleRadTrajRow(int i);
 
   VarVector GetVarRow(int i) { return m_traj_vars.row(i); }
   Var& GetVar(int i, int j) { return m_traj_vars.at(i, j); }
@@ -177,7 +178,8 @@ struct TRAJOPT_API ProblemConstructionInfo {
  See trajopt::PoseTermInfo
  */
 struct PoseCostInfo : public TermInfo, public MakesCost, public MakesConstraint {
-  int timestep;
+  int timestep;  // which timestep does this constraint refer to.
+  int duration;  // how many timesteps does this constraint last
   Vector3d xyz;
   Vector4d wxyz;
   Vector3d pos_coeffs, rot_coeffs;
@@ -269,6 +271,7 @@ struct CollisionCostInfo : public TermInfo, public MakesCost {
   /// safety margin: contacts with distance < dist_pen are penalized
   DblVec dist_pen;
   bool continuous;
+  bool hasObstacleArm;
   /// for continuous-time penalty, use swept-shape between timesteps t and t+gap (gap=1 by default)
   int gap;
   void fromJson(const Value& v);

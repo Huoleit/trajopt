@@ -136,6 +136,52 @@ void SingleTimestepCollisionEvaluator::CalcDistExpressions(const DblVec& x, vect
 
 ////////////////////////////////////////
 
+SingleTimestepDualArmCollisionEvaluator::SingleTimestepDualArmCollisionEvaluator(ConfigurationPtr rad,
+                                                                                 const VarVector& vars,
+                                                                                 ConfigurationPtr obstacleRad,
+                                                                                 const DblVec& obstacleRadConfiguration)
+    : m_env(rad->GetEnv()),
+      m_cc(CollisionChecker::GetOrCreate(*m_env)),
+      m_rad(rad),
+      m_vars(vars),
+      m_link2ind(),
+      m_links(),
+      m_filterMask(-1),
+      m_obstacleRad(obstacleRad),
+      m_obstacleConfiguration(obstacleRadConfiguration) {
+  vector<int> inds;
+  m_rad->GetAffectedLinks(m_links, true, inds);
+  for (int i = 0; i < m_links.size(); ++i) {
+    m_link2ind[m_links[i].get()] = inds[i];
+  }
+}
+
+void SingleTimestepDualArmCollisionEvaluator::CalcCollisions(const DblVec& x, vector<Collision>& collisions) {
+  DblVec dofvals = getDblVec(x, m_vars);
+  m_rad->SetDOFValues(dofvals);
+  m_obstacleRad->SetDOFValues(m_obstacleConfiguration);
+  m_cc->LinksVsAll(m_links, collisions, m_filterMask);
+}
+void SingleTimestepDualArmCollisionEvaluator::CalcDists(const DblVec& x, DblVec& dists) {
+  vector<Collision> collisions;
+  GetCollisionsCached(x, collisions);
+  CollisionsToDistances(collisions, m_link2ind, dists);
+}
+void SingleTimestepDualArmCollisionEvaluator::CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) {
+  vector<Collision> collisions;
+  GetCollisionsCached(x, collisions);
+  DblVec dofvals = getDblVec(x, m_vars);
+  CollisionsToDistanceExpressions(collisions, *m_rad, m_link2ind, m_vars, dofvals, exprs, false);
+}
+
+void SingleTimestepDualArmCollisionEvaluator::GetCollisionsCached(const DblVec& x, vector<Collision>& collisions) {
+  DblVec concatenate(x);
+  concatenate.insert(concatenate.end(), m_obstacleConfiguration.begin(), m_obstacleConfiguration.end());
+  Base::GetCollisionsCached(concatenate, collisions);
+}
+
+////////////////////////////////////////
+
 CastCollisionEvaluator::CastCollisionEvaluator(ConfigurationPtr rad, const VarVector& vars0, const VarVector& vars1)
     : m_env(rad->GetEnv()),
       m_cc(CollisionChecker::GetOrCreate(*m_env)),
@@ -171,6 +217,53 @@ void CastCollisionEvaluator::CalcDists(const DblVec& x, DblVec& dists) {
   CollisionsToDistances(collisions, m_link2ind, dists);
 }
 
+////////////////////////////////////////
+
+CastDualArmCollisionEvaluator::CastDualArmCollisionEvaluator(ConfigurationPtr primaryRad, const VarVector& vars0,
+                                                             const VarVector& vars1, ConfigurationPtr obstacleRad,
+                                                             const DblVec& obstacleRadConfiguration)
+    : m_env(primaryRad->GetEnv()),
+      m_cc(CollisionChecker::GetOrCreate(*m_env)),
+      m_rad(primaryRad),
+      m_vars0(vars0),
+      m_vars1(vars1),
+      m_link2ind(),
+      m_links(),
+      m_obstacleRad(obstacleRad),
+      m_obstacleConfiguration(obstacleRadConfiguration) {
+  vector<int> inds;
+  m_rad->GetAffectedLinks(m_links, true, inds);
+  for (int i = 0; i < m_links.size(); ++i) {
+    m_link2ind[m_links[i].get()] = inds[i];
+  }
+}
+
+void CastDualArmCollisionEvaluator::CalcCollisions(const DblVec& x, vector<Collision>& collisions) {
+  DblVec dofvals0 = getDblVec(x, m_vars0);
+  DblVec dofvals1 = getDblVec(x, m_vars1);
+  m_rad->SetDOFValues(dofvals0);
+  m_obstacleRad->SetDOFValues(m_obstacleConfiguration);
+  m_cc->CastVsAll(*m_rad, m_links, dofvals0, dofvals1, collisions);
+}
+void CastDualArmCollisionEvaluator::CalcDistExpressions(const DblVec& x, vector<AffExpr>& exprs) {
+  vector<Collision> collisions;
+  GetCollisionsCached(x, collisions);
+  DblVec dofvals0 = getDblVec(x, m_vars0);
+  DblVec dofvals1 = getDblVec(x, m_vars1);
+  CollisionsToDistanceExpressions(collisions, *m_rad, m_link2ind, m_vars0, m_vars1, dofvals0, dofvals1, exprs);
+}
+void CastDualArmCollisionEvaluator::CalcDists(const DblVec& x, DblVec& dists) {
+  vector<Collision> collisions;
+  GetCollisionsCached(x, collisions);
+  CollisionsToDistances(collisions, m_link2ind, dists);
+}
+
+void CastDualArmCollisionEvaluator::GetCollisionsCached(const DblVec& x, vector<Collision>& collisions) {
+  DblVec concatenate(x);
+  concatenate.insert(concatenate.end(), m_obstacleConfiguration.begin(), m_obstacleConfiguration.end());
+  Base::GetCollisionsCached(concatenate, collisions);
+}
+
 //////////////////////////////////////////
 
 typedef OpenRAVE::RaveVector<float> RaveVectorf;
@@ -199,10 +292,25 @@ CollisionCost::CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad
       m_dist_pen(dist_pen),
       m_coeff(coeff) {}
 
+CollisionCost::CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars,
+                             ConfigurationPtr obstacleRad, const DblVec& obstacleRadConfiguration)
+    : Cost("dual_arm_collision"),
+      m_calc(new SingleTimestepDualArmCollisionEvaluator(rad, vars, obstacleRad, obstacleRadConfiguration)),
+      m_dist_pen(dist_pen),
+      m_coeff(coeff) {}
+
 CollisionCost::CollisionCost(double dist_pen, double coeff, ConfigurationPtr rad, const VarVector& vars0,
                              const VarVector& vars1)
     : Cost("cast_collision"),
       m_calc(new CastCollisionEvaluator(rad, vars0, vars1)),
+      m_dist_pen(dist_pen),
+      m_coeff(coeff) {}
+
+CollisionCost::CollisionCost(double dist_pen, double coeff, ConfigurationPtr primaryRad, const VarVector& vars0,
+                             const VarVector& vars1, ConfigurationPtr obstacleRad,
+                             const DblVec& obstacleRadConfiguration)
+    : Cost("cast_dual_arm_collision"),
+      m_calc(new CastDualArmCollisionEvaluator(primaryRad, vars0, vars1, obstacleRad, obstacleRadConfiguration)),
       m_dist_pen(dist_pen),
       m_coeff(coeff) {}
 ConvexObjectivePtr CollisionCost::convex(const vector<double>& x, Model* model) {

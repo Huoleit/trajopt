@@ -40,10 +40,10 @@ int main() {
     bool success = env->Load("robots/pr2-beta-static.zae");
     FAIL_IF_FALSE(success);
   }
-  {
-    bool success = env->Load(getDataPath() + "/table.xml");
-    FAIL_IF_FALSE(success);
-  }
+  // {
+  //   bool success = env->Load(getDataPath() + "/table.xml");
+  //   FAIL_IF_FALSE(success);
+  // }
   viewer.reset(new OSGViewer(env));
   viewer->UpdateSceneData();
   env->AddViewer(viewer);
@@ -66,13 +66,16 @@ int main() {
 
   plotter.Add(prob->getCosts());
   plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
-  // plotter.AddAnimation(prob->GetObstacleRad(), &prob->GetObstacleRadTraj());
-  opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
+  plotter.AddAnimation(prob->GetObstacleRad(), &prob->GetObstacleRadTraj());
+  // opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
 
-  // plotter.OptimizerAnimationCallback(prob.get(), opt.x());
+  Transform target(OpenRAVE::Vector(-0.00359154, -0.103927, 0.612814, 0.783355),
+                   OpenRAVE::Vector(0.467639, 0.34966, 0.765128));
+  GraphHandlePtr axesPtr = viewer->PlotAxes(target, 0.1);
+  plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
 
   viewer.reset();
   env.reset();

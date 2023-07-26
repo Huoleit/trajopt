@@ -1,6 +1,6 @@
 {
   "basic_info": {
-    "n_steps": 50,
+    "n_steps": 80,
     "manip": "leftarm",
     "start_fixed": true,
     "dt": 0.1
@@ -19,7 +19,7 @@
       "name": "bottom_pos",
       "params": {
         "vals": [ -0.181641, 0.816297, 0, -0.19026, -0.759129, -0.595635, -0.484977 ],
-        "timestep": 25
+        "timestep": 40
       }
     },
     {
@@ -33,7 +33,7 @@
       "type": "joint_vel_limits",
       "name": "vel_limits",
       "params": {
-        "vals": [ 1.5 ]
+        "vals": [ 1.0 ]
       }
     }
   ],

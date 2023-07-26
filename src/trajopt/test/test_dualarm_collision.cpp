@@ -13,16 +13,6 @@ using namespace std;
 using namespace trajopt;
 using namespace util;
 
-// void PlotCollisionGeometry(const osgGA::GUIEventAdapter& ea) {
-//   if (handles.size() == 0) {
-//     cc->PlotCollisionGeometry(handles);
-//     vector<Collision> collisions;
-//     cc->AllVsAll(collisions);
-//   } else {
-//     handles.clear();
-//   }
-// }
-
 void PrintCollisions(const vector<Collision>& collisions) {
   LOG_INFO("%ld collisions found\n", collisions.size());
   for (int i = 0; i < collisions.size(); ++i) {
@@ -44,7 +34,7 @@ void PrintCollisions(const vector<Collision>& collisions) {
 // }
 
 int main() {
-  RaveInitialize(false, OpenRAVE::Level_Warn);
+  RaveInitialize(true, OpenRAVE::Level_Warn);
   EnvironmentBasePtr env = RaveCreateEnvironment();
   env->StopSimulation();
 
@@ -58,8 +48,13 @@ int main() {
   RobotBasePtr robot = env->GetRobot("pr2");
   FAIL_IF_FALSE(robot);
 
-  RobotAndDOFPtr rad(new RobotAndDOF(robot, robot->GetManipulator("rightarm")->GetArmIndices()));
-  RobotAndDOFPtr obstacleRad(new RobotAndDOF(robot, robot->GetManipulator("leftarm")->GetArmIndices()));
+  RobotBase::ManipulatorPtr left_manip = robot->GetManipulator("leftarm");
+  RobotBase::ManipulatorPtr right_manip = robot->GetManipulator("rightarm");
+  left_manip->SetIkSolver(RaveCreateIkSolver(env, "ikfast_pr2_leftarm"));
+  right_manip->SetIkSolver(RaveCreateIkSolver(env, "ikfast_pr2_rightarm"));
+
+  RobotAndDOFPtr rad(new RobotAndDOF(robot, right_manip->GetArmIndices()));
+  RobotAndDOFPtr obstacleRad(new RobotAndDOF(robot, left_manip->GetArmIndices()));
 
   DblVec dofvals{0.352417, 0.258496, -1, -0.91908, -0.55483, -0.282656, 2.09128};
   DblVec obstacleDofvals{0.101152, 0.232869, 0.6, -0.279225, -1.64525, -0.139862, 2.76289};
@@ -70,23 +65,28 @@ int main() {
   std::vector<int> ind;
   rad->GetAffectedLinks(links, true, ind);
 
-  vector<Collision> collisions;
-  checker->SetContactDistance(0.01);
-  // checker->CastVsAll(*rad, std::vector<KinBody::LinkPtr>{robot->GetLink("r_forearm_link")}, dofvals, dofvals,
-  //                    collisions);
-  checker->LinkVsAll(*robot->GetLink("r_forearm_link"), collisions, 3);
-
-  vector<OR::GraphHandlePtr> handles;
-  cout << "collisions: " << collisions.size() << endl;
-  PlotCollisions(collisions, *env, handles, .02);
-
-  checker->PlotCollisionGeometry(handles);
-  // checker->PlotCollisionGeometryByLink(.get(), handles);
-  PrintCollisions(collisions);
-
   DriveControl dc(robot, viewer);
+  ManipulatorControl mc_left(left_manip, viewer, true);
+  ManipulatorControl mc_right(right_manip, viewer, false);
 
-  viewer->Idle();
+  vector<Collision> collisions;
+  vector<OR::GraphHandlePtr> handles;
+
+  while (true) {
+    collisions.clear();
+    handles.clear();
+
+    checker->LinksVsAll(links, collisions, -1);
+
+    PlotCollisions(collisions, *env, handles, .02);
+    checker->PlotCollisionGeometry(handles);
+    PrintCollisions(collisions);
+    try {
+      viewer->Idle();
+    } catch (...) {
+      break;
+    }
+  }
 
   viewer.reset();
   env.reset();
