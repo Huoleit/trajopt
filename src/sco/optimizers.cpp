@@ -4,6 +4,7 @@
 #include <boost/format.hpp>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 
 #include "expr_ops.hpp"
 #include "macros.h"
@@ -259,6 +260,7 @@ OptStatus BasicTrustRegionSQP::optimize() {
        ++merit_increases) {       /* merit adjustment loop */
     for (int iter = 1;; ++iter) { /* sqp loop */
       callCallbacks(x_);
+      benchmark::RepeatedTimer::ScopedTimer timer(solveTimer_);  // start timer
 
       LOG_DEBUG("current iterate: %s", CSTR(x_));
       LOG_INFO("iteration %i", iter);
@@ -288,14 +290,11 @@ OptStatus BasicTrustRegionSQP::optimize() {
       vector<ConvexConstraintsPtr> cnt_models = convexifyConstraints(constraints, x_, model_.get());
       vector<ConvexObjectivePtr> cnt_cost_models = cntsToCosts(cnt_models, merit_error_coeff_, model_.get());
       model_->update();
-      BOOST_FOREACH (ConvexObjectivePtr& cost, cost_models)
-        cost->addConstraintsToModel();
-      BOOST_FOREACH (ConvexObjectivePtr& cost, cnt_cost_models)
-        cost->addConstraintsToModel();
+      BOOST_FOREACH (ConvexObjectivePtr& cost, cost_models) { cost->addConstraintsToModel(); }
+      BOOST_FOREACH (ConvexObjectivePtr& cost, cnt_cost_models) { cost->addConstraintsToModel(); }
       model_->update();
       QuadExpr objective;
-      BOOST_FOREACH (ConvexObjectivePtr& co, cost_models)
-        exprInc(objective, co->quad_);
+      BOOST_FOREACH (ConvexObjectivePtr& co, cost_models) { exprInc(objective, co->quad_); }
       BOOST_FOREACH (ConvexObjectivePtr& co, cnt_cost_models) { exprInc(objective, co->quad_); }
       //    objective = cleanupExpr(objective);
       model_->setObjective(objective);
@@ -329,14 +328,14 @@ OptStatus BasicTrustRegionSQP::optimize() {
         // the n variables of the OptProb happen to be the first n variables in the Model
         DblVec new_x(model_var_vals.begin(), model_var_vals.begin() + x_.size());
 
-        if (GetLogLevel() >= util::LevelDebug) {
-          DblVec cnt_costs1 = evaluateModelCosts(cnt_cost_models, model_var_vals);
-          DblVec cnt_costs2 = model_cnt_viols;
-          for (int i = 0; i < cnt_costs2.size(); ++i) cnt_costs2[i] *= merit_error_coeff_;
-          LOG_DEBUG("SHOULD BE ALMOST THE SAME: %s ?= %s", CSTR(cnt_costs1), CSTR(cnt_costs2));
-          // not exactly the same because cnt_costs1 is based on aux variables, but they might not be at EXACTLY the
-          // right value
-        }
+        // if (GetLogLevel() >= util::LevelDebug) {
+        //   DblVec cnt_costs1 = evaluateModelCosts(cnt_cost_models, model_var_vals);
+        //   DblVec cnt_costs2 = model_cnt_viols;
+        //   for (int i = 0; i < cnt_costs2.size(); ++i) cnt_costs2[i] *= merit_error_coeff_;
+        //   LOG_DEBUG("SHOULD BE ALMOST THE SAME: %s ?= %s", CSTR(cnt_costs1), CSTR(cnt_costs2));
+        //   // not exactly the same because cnt_costs1 is based on aux variables, but they might not be at EXACTLY the
+        //   // right value
+        // }
 
         DblVec new_cost_vals = evaluateCosts(prob_->getCosts(), new_x);
         DblVec new_cnt_viols = evaluateConstraintViols(constraints, new_x);
@@ -356,9 +355,9 @@ OptStatus BasicTrustRegionSQP::optimize() {
           LOG_INFO(" ");
           printCostInfo(results_.cost_vals, model_cost_vals, new_cost_vals, results_.cnt_viols, model_cnt_viols,
                         new_cnt_viols, cost_names, cnt_names, merit_error_coeff_);
-          printLinearConstraintsInfo(old_linearCnt_viols, new_linearCnt_viols, linearConstraints_names);
           printf("%15s | %10.3e | %10.3e | %10.3e | %10.3e\n", "TOTAL", old_merit, approx_merit_improve,
                  exact_merit_improve, merit_improve_ratio);
+          // printLinearConstraintsInfo(old_linearCnt_viols, new_linearCnt_viols, linearConstraints_names);
         }
 
         if (approx_merit_improve < -1e-5) {
@@ -424,6 +423,17 @@ cleanup:
   callCallbacks(x_);
 
   return retval;
+}
+
+void BasicTrustRegionSQP::printBenchmarkingResult() {
+  stringstream ss;
+  ss << "************ Benchmark ***********\n"
+     << "# of iteration: " << solveTimer_.getNumTimedIntervals() << "\n"
+     << "Average iteration time [ms]: " << solveTimer_.getAverageInMilliseconds() << "\n"
+     << "Max iteration time [ms]: " << solveTimer_.getMaxIntervalInMilliseconds() << "\n"
+     << "Total time [ms]: " << solveTimer_.getTotalInMilliseconds() << "\n"
+     << "************************";
+  cout << ss.str() << endl;
 }
 
 }  // namespace sco

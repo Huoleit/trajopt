@@ -11,6 +11,8 @@
 #include "utils/eigen_conversions.hpp"
 
 // Debug
+#include <chrono>
+
 #include "utils/stl_to_string.hpp"
 
 using namespace OpenRAVE;
@@ -32,7 +34,7 @@ int main() {
   EnvironmentBasePtr env;
   OSGViewerPtr viewer;
 
-  RaveInitialize(false, OpenRAVE::Level_Warn);
+  RaveInitialize(false, OpenRAVE::Level_Error);
   env = RaveCreateEnvironment();
   env->StopSimulation();
 
@@ -55,7 +57,7 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm_config/underneath.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
@@ -70,12 +72,29 @@ int main() {
   // opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
-  opt.optimize();
 
-  Transform target(OpenRAVE::Vector(-0.00359154, -0.103927, 0.612814, 0.783355),
-                   OpenRAVE::Vector(0.467639, 0.34966, 0.765128));
-  GraphHandlePtr axesPtr = viewer->PlotAxes(target, 0.1);
-  plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
+  std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+  opt.optimize();
+  std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+  std::cout << "Optimization took " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()
+            << " millis" << std::endl;
+  opt.printBenchmarkingResult();
+
+  {
+    GraphHandlePtr axesPtr;
+    for (const auto& term : pci.cost_infos) {
+      if (PoseCostInfo* poseCostInfo = dynamic_cast<PoseCostInfo*>(term.get())) {
+        // wxyz -> xyzw
+        Vector3d p = poseCostInfo->xyz;
+        Vector4d q(poseCostInfo->wxyz[1], poseCostInfo->wxyz[2], poseCostInfo->wxyz[3], poseCostInfo->wxyz[0]);
+        axesPtr = viewer->PlotAxes(toRaveTransform(q, p), 0.1);
+
+        break;
+      }
+    }
+
+    plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
+  }  // end scope for axesPtr - axes should be removed before viewer is destroyed
 
   viewer.reset();
   env.reset();

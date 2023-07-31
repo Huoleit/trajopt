@@ -215,7 +215,8 @@
         "kerningtype": "cpp",
         "guieventhandler": "cpp",
         "guiactionadapter": "cpp",
-        "eventqueue": "cpp"
+        "eventqueue": "cpp",
+        "stdvector": "cpp"
     },
     "cSpell.words": [
         "aabb",

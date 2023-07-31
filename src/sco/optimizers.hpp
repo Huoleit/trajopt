@@ -3,6 +3,7 @@
 #include <string>
 
 #include "modeling.hpp"
+#include "utils/repeatedTimer.hpp"
 /*
  * Algorithms for non-convex, constrained optimization
  */
@@ -56,6 +57,8 @@ class Optimizer {
   vector<double>& x() { return results_.x; }
   OptResults& results() { return results_; }
 
+  virtual void printBenchmarkingResult(){};
+
   typedef boost::function<void(OptProb*, DblVec&)> Callback;
   void addCallback(const Callback& f);  // called before each iteration
  protected:
@@ -96,11 +99,16 @@ class BasicTrustRegionSQP : public Optimizer {
   void setProblem(OptProbPtr prob);
   OptStatus optimize();
 
+  void printBenchmarkingResult() override;
+
  protected:
   void adjustTrustRegion(double ratio);
   void setTrustBoxConstraints(const vector<double>& x);
   void initParameters();
   ModelPtr model_;
+
+ private:
+  benchmark::RepeatedTimer solveTimer_;
 };
 
 }  // namespace sco
