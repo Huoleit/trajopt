@@ -178,11 +178,13 @@ struct TRAJOPT_API ProblemConstructionInfo {
  See trajopt::PoseTermInfo
  */
 struct PoseCostInfo : public TermInfo, public MakesCost, public MakesConstraint {
-  int timestep;  // which timestep does this constraint refer to.
-  int duration;  // how many timesteps does this constraint last
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
   Vector3d xyz;
   Vector4d wxyz;
   Vector3d pos_coeffs, rot_coeffs;
+
+  int timestep;  // which timestep does this constraint refer to.
+  int duration;  // how many timesteps does this constraint last
   // double coeff;
   KinBody::LinkPtr link;
   void fromJson(const Value& v);
