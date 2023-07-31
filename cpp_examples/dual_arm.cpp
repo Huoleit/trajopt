@@ -57,7 +57,7 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm_config/underneath.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm_config/crossarm.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
@@ -81,17 +81,18 @@ int main() {
   opt.printBenchmarkingResult();
 
   {
-    GraphHandlePtr axesPtr;
+    vector<GraphHandlePtr> axesPtr;
     for (const auto& term : pci.cost_infos) {
       if (PoseCostInfo* poseCostInfo = dynamic_cast<PoseCostInfo*>(term.get())) {
-        // wxyz -> xyzw
         Vector3d p = poseCostInfo->xyz;
-        Vector4d q(poseCostInfo->wxyz[1], poseCostInfo->wxyz[2], poseCostInfo->wxyz[3], poseCostInfo->wxyz[0]);
-        axesPtr = viewer->PlotAxes(toRaveTransform(q, p), 0.1);
-
+        Vector4d q = poseCostInfo->wxyz;
+        axesPtr.push_back(viewer->PlotAxes(toRaveTransform(q, p), 0.1));
         break;
       }
     }
+    Transform identity;
+    identity.identity();
+    axesPtr.push_back(viewer->PlotAxes(identity, 0.1));
 
     plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
   }  // end scope for axesPtr - axes should be removed before viewer is destroyed

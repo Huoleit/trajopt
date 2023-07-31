@@ -460,6 +460,7 @@ void JointPosCostInfo::fromJson(const Value& v) {
   const Value& params = v["params"];
   childFromJson(params, vals, "vals");
   childFromJson(params, coeffs, "coeffs");
+
   if (coeffs.size() == 1) coeffs = DblVec(n_steps, coeffs[0]);
 
   int n_dof = gPCI->rad->GetDOF();
@@ -467,13 +468,20 @@ void JointPosCostInfo::fromJson(const Value& v) {
     PRINT_AND_THROW(boost::format("wrong number of dof vals. expected %i got %i") % n_dof % vals.size());
   }
   childFromJson(params, timestep, "timestep", gPCI->basic_info.n_steps - 1);
+  childFromJson(params, duration, "duration", 1);
+  if (timestep + duration > n_steps) {
+    PRINT_AND_THROW(boost::format("timestep (%i) + duration (%i) extends past trajectory end (%i)") % timestep %
+                    duration % n_steps);
+  }
 
-  const char* all_fields[] = {"vals", "coeffs", "timestep"};
+  const char* all_fields[] = {"vals", "coeffs", "timestep", "duration"};
   ensure_only_members(params, all_fields, sizeof(all_fields) / sizeof(char*));
 }
 void JointPosCostInfo::hatch(TrajOptProb& prob) {
-  prob.addCost(CostPtr(new JointPosCost(prob.GetVarRow(timestep), toVectorXd(vals), toVectorXd(coeffs))));
-  prob.getCosts().back()->setName(name);
+  for (int i = 0; i < duration; ++i) {
+    prob.addCost(CostPtr(new JointPosCost(prob.GetVarRow(timestep + i), toVectorXd(vals), toVectorXd(coeffs))));
+    prob.getCosts().back()->setName(name + "_" + boost::lexical_cast<string>(i));
+  }
 }
 
 void CartVelCntInfo::fromJson(const Value& v) {
@@ -682,16 +690,23 @@ void JointConstraintInfo::fromJson(const Value& v) {
     PRINT_AND_THROW(boost::format("wrong number of dof vals. expected %i got %i") % n_dof % vals.size());
   }
   childFromJson(params, timestep, "timestep", gPCI->basic_info.n_steps - 1);
+  childFromJson(params, duration, "duration", 1);
+  if (timestep + duration > gPCI->basic_info.n_steps) {
+    PRINT_AND_THROW(boost::format("timestep (%i) + duration (%i) extends past trajectory end (%i)") % timestep %
+                    duration % gPCI->basic_info.n_steps);
+  }
 
-  const char* all_fields[] = {"vals", "timestep"};
+  const char* all_fields[] = {"vals", "timestep", "duration"};
   ensure_only_members(params, all_fields, sizeof(all_fields) / sizeof(char*));
 }
 
 void JointConstraintInfo::hatch(TrajOptProb& prob) {
-  VarVector vars = prob.GetVarRow(timestep);
-  int n_dof = vars.size();
-  for (int j = 0; j < n_dof; ++j) {
-    prob.addLinearConstraint(exprSub(AffExpr(vars[j]), vals[j]), EQ);
+  for (int i = 0; i < duration; ++i) {
+    VarVector vars = prob.GetVarRow(timestep + i);
+    int n_dof = vars.size();
+    for (int j = 0; j < n_dof; ++j) {
+      prob.addLinearConstraint(exprSub(AffExpr(vars[j]), vals[j]), EQ);
+    }
   }
 }
 

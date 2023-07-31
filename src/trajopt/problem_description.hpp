@@ -203,6 +203,7 @@ struct PoseCostInfo : public TermInfo, public MakesCost, public MakesConstraint 
 struct JointPosCostInfo : public TermInfo, public MakesCost {
   DblVec vals, coeffs;
   int timestep;
+  int duration;
   void fromJson(const Value& v);
   void hatch(TrajOptProb& prob);
   DEFINE_CREATE(JointPosCostInfo)
@@ -290,6 +291,7 @@ struct JointConstraintInfo : public TermInfo, public MakesConstraint {
   DblVec vals;
   /// which timestep. default = n_timesteps - 1
   int timestep;
+  int duration;
   void fromJson(const Value& v);
   void hatch(TrajOptProb& prob);
   DEFINE_CREATE(JointConstraintInfo)

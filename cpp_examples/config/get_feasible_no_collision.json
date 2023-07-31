@@ -1,6 +1,6 @@
 {
   "basic_info": {
-    "n_steps": 80,
+    "n_steps": 50,
     "manip": "leftarm",
     "start_fixed": true,
     "dt": 0.1
@@ -16,29 +16,30 @@
   "constraints": [
     {
       "type": "joint",
-      "name": "bottom_pos",
+      "name": "pos",
       "params": {
-        "vals": [ -0.181641, 0.816297, 0, -0.19026, -0.759129, -0.595635, -0.484977 ],
-        "timestep": 40
+        "vals": [ 0.00137727, 0.241491, 1.6, -1.4641, -0.773889, -0.342138, -1.26866 ],
+        "timestep": 25,
+        "duration": 4
       }
     },
     {
       "type": "joint",
       "name": "back_to_start",
       "params": {
-        "vals": [ -0.0433433, -0.35254, 0, -0.620221, -2.48622, -0.422652, 1.73493 ]
+        "vals": [ 1.24742, 0.59448, 3.3, -1.14187, -0.971013, -0.542677, -1.0877 ]
       }
     },
     {
       "type": "joint_vel_limits",
       "name": "vel_limits",
       "params": {
-        "vals": [ 1.0 ]
+        "vals": [ 2.0 ]
       }
     }
   ],
   "init_info": {
     "type": "stationary",
-    "startpoint": [ -0.0433433, -0.35254, 0, -0.620221, -2.48622, -0.422652, 1.73493 ]
+    "startpoint": [ 1.24742, 0.59448, 3.3, -1.14187, -0.971013, -0.542677, -1.0877 ]
   }
 }
