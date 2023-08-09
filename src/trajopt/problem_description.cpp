@@ -433,6 +433,10 @@ void PoseCostInfo::fromJson(const Value& v) {
   if (!link) {
     PRINT_AND_THROW(boost::format("invalid link name: %s") % linkstr);
   }
+  if (timestep + duration > gPCI->basic_info.n_steps) {
+    PRINT_AND_THROW(boost::format("timestep (%i) + duration (%i) extends trajectory end (%i)") % timestep % duration %
+                    gPCI->basic_info.n_steps);
+  }
 
   const char* all_fields[] = {"timestep", "duration", "xyz", "wxyz", "pos_coeffs", "rot_coeffs", "link"};
   ensure_only_members(params, all_fields, sizeof(all_fields) / sizeof(char*));

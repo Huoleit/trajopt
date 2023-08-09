@@ -37,7 +37,7 @@ int main() {
   env->StopSimulation();
 
   {
-    bool success = env->Load("robots/pr2-beta-static.zae");
+    bool success = env->Load(getDataPath() + "/abb/model.xml");
     FAIL_IF_FALSE(success);
   }
   viewer.reset(new OSGViewer(env));
@@ -48,7 +48,7 @@ int main() {
   robot->SetDOFValues(DblVec(robot->GetDOF(), 0));
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/get_feasible_no_collision.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/abb/get_feasible_no_collision.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
@@ -66,6 +66,16 @@ int main() {
   cout << "traj: \n" << traj.format(CleanFmt) << endl;
 
   try {
+    vector<GraphHandlePtr> axesPtr;
+    for (const auto& term : pci.cost_infos) {
+      if (PoseCostInfo* poseCostInfo = dynamic_cast<PoseCostInfo*>(term.get())) {
+        Vector3d p = poseCostInfo->xyz;
+        Vector4d q = poseCostInfo->wxyz;
+        axesPtr.push_back(viewer->PlotAxes(toRaveTransform(q, p), 0.1));
+        break;
+      }
+    }
+
     viewer->Idle();
   } catch (...) {
     viewer.reset();

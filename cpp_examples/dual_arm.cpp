@@ -39,7 +39,7 @@ int main() {
   env->StopSimulation();
 
   {
-    bool success = env->Load("robots/pr2-beta-static.zae");
+    bool success = env->Load(getDataPath() + "/abb/model.xml");
     FAIL_IF_FALSE(success);
   }
   // {
@@ -57,7 +57,7 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/dual_arm_config/crossarm.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/abb/above.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
