@@ -47,6 +47,13 @@ int main() {
   I.identity();
   robot->SetTransform(I);
 
+  ProblemConstructionInfo pci(env);
+  Json::Value root = readJsonFile(getConfigPath() + "/abb/spatial_temporal.json");
+  pci.fromJson(root);
+  pci.rad->SetRobotActiveDOFs();
+  pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
+  TrajOptProbPtr prob = ConstructProblem(pci);
+
   double radius = 0.07;
   sipp::RobotCollisionGeometry robot_collision_geometry(pci.rad);
   robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, -0.03), radius, "right_link_palm");
@@ -62,20 +69,13 @@ int main() {
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.16), radius, "left_link_4");
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.1), radius, "left_link_4");
 
-  ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/abb/spatial_temporal.json");
-  pci.fromJson(root);
-  pci.rad->SetRobotActiveDOFs();
-  pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
-  TrajOptProbPtr prob = ConstructProblem(pci);
-
   BasicTrustRegionSQP opt(prob);
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
 
   TrajArray nominal_traj = getTraj(opt.x(), prob->GetVars());
-  sipp::TemporalCollisionInfo t_info(nominal_traj, pci.obstacle_info.data, robot_collision_geometry,
-                                     obstacle_collision_geometry);
+  // sipp::TemporalCollisionInfo t_info(nominal_traj, pci.obstacle_info.data, robot_collision_geometry,
+  //                                    obstacle_collision_geometry);
 
   viewer.reset();
   env.reset();

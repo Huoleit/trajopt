@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Eigen/Core>
+#include <iostream>
 #include <string>
 #include <trajopt/collision_checker.hpp>
 #include <trajopt/typedefs.hpp>
@@ -83,4 +84,10 @@ class TemporalGraph {
   std::vector<TemporalGraphNode> nodes_;
   std::vector<int> start_index_of_node_;
 };
+
+void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_time,
+                                                   std::vector<TimeInterval>& safe_intervals);
+
+std::ostream& operator<<(std::ostream& os, const TimeInterval& interval);
+std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& interval);
 }  // namespace sipp

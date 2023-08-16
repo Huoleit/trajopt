@@ -19,6 +19,22 @@ bool isCollided(const std::vector<SphereCollisionGeometry>& A, const std::vector
 }
 }  // namespace
 
+std::ostream& operator<<(std::ostream& os, const TimeInterval& interval) {
+  os << "[" << interval.start << ", " << interval.end << "]";
+  return os;
+}
+std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& interval) {
+  os << "[";
+  for (int i = 0; i < interval.size(); ++i) {
+    os << interval[i];
+    if (i != interval.size() - 1) {
+      os << ", ";
+    }
+  }
+  os << "]";
+  return os;
+}
+
 bool SphereCollisionGeometry::isCollided(const SphereCollisionGeometry& other) const {
   Eigen::Vector3d diff = center - other.center;
   double distance_squared = diff.squaredNorm();
@@ -58,6 +74,21 @@ void RobotCollisionGeometry::createCollisionGeometriesAtState(
     collision_geometry.center = Eigen::Vector3d(origin_in_world.x, origin_in_world.y, origin_in_world.z);
 
     collisionGeometries.push_back(collision_geometry);
+  }
+}
+
+void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_time,
+                                                   std::vector<TimeInterval>& safe_intervals) {
+  int current = -1;
+  int next;
+  for (int i = 0; i < collision_timestamps.size(); ++i, current = next) {
+    next = collision_timestamps[i];
+    if (next - current > 1) {  // safe interval in the middle
+      safe_intervals.push_back({current + 1, next - 1});
+    }
+  }
+  if (current + 1 < max_time) {  // last safe interval
+    safe_intervals.push_back({current + 1, max_time - 1});
   }
 }
 
