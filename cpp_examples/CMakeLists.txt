@@ -22,3 +22,6 @@ target_link_libraries(dual_arm trajopt osgviewer)
 
 add_executable(time_optimal_no_collision time_optimal_no_collision.cpp)
 target_link_libraries(time_optimal_no_collision trajopt osgviewer)
+
+add_executable(spatial_temporal_opt spatial_temporal_opt.cpp)
+target_link_libraries(spatial_temporal_opt sipp osgviewer)
