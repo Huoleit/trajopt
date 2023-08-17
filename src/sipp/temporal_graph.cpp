@@ -130,22 +130,7 @@ void TemporalCollisionInfo::hatch(trajopt::TrajArray& reference_traj, trajopt::T
 
   // Construct safe intervals for each state
   for (auto& robot_state : m_reference_states) {
-    int current = -1;
-    int next;
-    for (int i = 0; i < robot_state.collision_timestamp.size(); ++i, current = next) {
-      next = robot_state.collision_timestamp[i];
-      if (current == -1 && next - 1 >= 0) {  // first safe interval
-        robot_state.safe_intervals.push_back({0, next - 1});
-      }
-
-      if (next - current > 1) {  // safe interval in the middle
-        robot_state.safe_intervals.push_back({current + 1, next - 1});
-      }
-    }
-    if (current + 1 < N) {  // last safe interval
-      robot_state.safe_intervals.push_back({current + 1, N - 1});
-    }
+    constructSafeIntervalsFromCollisionTimestamps(robot_state.collision_timestamp, N, robot_state.safe_intervals);
   }
 }
-
 }  // namespace sipp

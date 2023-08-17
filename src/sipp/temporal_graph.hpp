@@ -12,6 +12,8 @@ namespace sipp {
 struct TimeInterval {
   int start;
   int end;
+
+  bool operator==(const TimeInterval& other) const { return start == other.start && end == other.end; }
 };
 
 struct SphereCollisionGeometry {
