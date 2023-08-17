@@ -236,6 +236,7 @@
         "Eigen",
         "endjoints",
         "GEOMPROPERTIES",
+        "getSuccesors",
         "idof",
         "inds",
         "Ineq",

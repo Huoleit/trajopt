@@ -65,11 +65,10 @@ int main() {
   obstacle_traj.setZero();
 
   temporal_info.hatch(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
-  const std::vector<sipp::NominalState>& reference_states = temporal_info.getReferenceStates();
 
-  rad->SetDOFValues(util::toDblVec(reference_states.front().state));
+  rad->SetDOFValues(util::toDblVec(temporal_info.getState(0).state));
   std::vector<OpenRAVE::GraphHandlePtr> handles;
-  for (auto& sphere : reference_states.front().collision_geometries) {
+  for (auto& sphere : temporal_info.getState(0).collision_geometries) {
     handles.push_back(
         viewer->PlotSphere(OpenRAVE::Vector(sphere.center.x(), sphere.center.y(), sphere.center.z()), 0.07));
     SetColor(handles.back(), osg::Vec4(1, 0, 0, 0.3));

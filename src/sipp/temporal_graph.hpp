@@ -10,8 +10,13 @@
 namespace sipp {
 
 struct TimeInterval {
-  int start;
-  int end;
+  typedef int TimeType;
+
+  TimeType start;
+  TimeType end;
+
+  bool isOverlapped(const TimeInterval& other) const { return !(end < other.start || other.end < start); }
+  TimeInterval intersect(const TimeInterval& other) const;  // call this only if isOverlapped returns true
 
   bool operator==(const TimeInterval& other) const { return start == other.start && end == other.end; }
 };
@@ -58,33 +63,51 @@ class TemporalCollisionInfo {
   void hatch(trajopt::TrajArray& reference_traj, trajopt::TrajArray& obstacle_traj, RobotCollisionGeometry& robot,
              RobotCollisionGeometry& obstacle);
 
-  const std::vector<NominalState>& getReferenceStates() const { return m_reference_states; }
+  int getNumberOfAllSafeIntervals() const;
+  std::vector<int> getNumberOfSafeIntervals() const;
 
- private:
+  int getNumberOfStates() const;
+  const NominalState& getState(int time) const;
+
+ protected:
   double m_dt;
   std::vector<NominalState> m_reference_states;  // Expected states of the robot
   std::vector<NominalState> m_obstacle_states_;  // Known states of the other manipulator
 };
 
 struct TemporalGraphNode {
-  double arrival_time;
+  // Filled during initialization with the information from TemporalCollisionInfo
+  int state_index;
+  TimeInterval safe_interval;
 
-  double safe_time_from;
-  double safe_time_to;
+  // Below are used for search and result construction during runtime
+  enum { OPEN, CLOSED, UNDISCOVERED } state;
+  TemporalGraphNode* predecessor_ptr;
+  int arrival_time;
+
+  bool operator>(const TemporalGraphNode& other) const { return arrival_time > other.arrival_time; }
 };
 
+struct TimeStrategyKnot {
+  int arrival_time;
+  int waiting_duration;
+
+  int state_index;
+  Eigen::VectorXd state;  //!< The state of the robot at the given time
+};
 class TemporalGraph {
  public:
-  TemporalGraph(double dt, double max_time);
-
-  void buildGraph(const trajopt::TrajArray& reference_traj);
+  TemporalGraph(const TemporalCollisionInfo& temporal_collision_info);
+  bool validate() const;
+  std::vector<TimeStrategyKnot> getStrategy();
 
  private:
-  double dt_;
-  double max_time_;
+  std::vector<TemporalGraphNode*> getSuccesors(TemporalGraphNode* node);
 
-  std::vector<TemporalGraphNode> nodes_;
-  std::vector<int> start_index_of_node_;
+ private:
+  const TemporalCollisionInfo& m_temporal_collision_info;
+  std::vector<TemporalGraphNode> m_nodes;
+  std::vector<int> m_start_index_of_node;
 };
 
 void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_time,
@@ -92,4 +115,7 @@ void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& colli
 
 std::ostream& operator<<(std::ostream& os, const TimeInterval& interval);
 std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& interval);
+
+std::ostream& operator<<(std::ostream& os, const TimeStrategyKnot& knot);
+std::ostream& operator<<(std::ostream& os, const std::vector<TimeStrategyKnot>& strategy);
 }  // namespace sipp

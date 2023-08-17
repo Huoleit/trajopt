@@ -35,7 +35,13 @@ string error_string(int i, const vector<T>& expect, const vector<T>& actual) {
   return ss.str();
 }
 
-TEST(sipp, sphere) {
+class MockTemporalCollisionInfo : public TemporalCollisionInfo {
+ public:
+  MockTemporalCollisionInfo() : TemporalCollisionInfo(0.1) {}
+  std::vector<NominalState>& getStatesContainer() { return m_reference_states; }
+};
+
+TEST(sipp, sphere_collision_safe_intervals_construction) {
   EnvironmentBasePtr env = RaveCreateEnvironment();
   ASSERT_TRUE(env->Load(test_data_dir() + "sphere.xml"));
   RobotBasePtr sphereBot_1 = env->GetRobot("sphereBot");
@@ -75,14 +81,13 @@ TEST(sipp, sphere) {
   // clang-format on
   sipp::TemporalCollisionInfo temporal_info(0.1);
   temporal_info.hatch(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
-  const std::vector<sipp::NominalState>& reference_states = temporal_info.getReferenceStates();
 
   vector<vector<TimeInterval>> ans_intervals{{{0, 5}}, {{0, 0}, {2, 5}}, {{0, 5}},
                                              {{0, 5}}, {{0, 3}, {5, 5}}, {{0, 5}}};
   vector<vector<int>> ans_collision_timestamps{{}, {1}, {}, {}, {4}, {}};
 
-  for (int i = 0; i < reference_states.size(); ++i) {
-    const sipp::NominalState& state = reference_states[i];
+  for (int i = 0; i < temporal_info.getNumberOfStates(); ++i) {
+    const sipp::NominalState& state = temporal_info.getState(i);
 
     ASSERT_EQ(state.collision_timestamp.size(), ans_collision_timestamps[i].size())
         << error_string(i, ans_collision_timestamps[i], state.collision_timestamp);
@@ -95,4 +100,24 @@ TEST(sipp, sphere) {
 
     ASSERT_EQ(state.safe_intervals, ans_intervals[i]) << error_string(i, ans_intervals[i], state.safe_intervals);
   }
+}
+
+TEST(sipp, graph_search) {
+  MockTemporalCollisionInfo info;
+
+  NominalState state_0;
+  state_0.safe_intervals = {{0, 10}};
+  info.getStatesContainer().push_back(state_0);
+
+  NominalState state_1;
+  state_1.safe_intervals = {{0, 5}, {7, 10}};
+  info.getStatesContainer().push_back(state_1);
+
+  NominalState state_2;
+  state_2.safe_intervals = {{6, 6}};
+  info.getStatesContainer().push_back(state_2);
+
+  TemporalGraph graph(info);
+  std::vector<TimeStrategyKnot> result = graph.getStrategy();
+  cout << result << endl;
 }
