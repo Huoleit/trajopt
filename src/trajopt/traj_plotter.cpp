@@ -38,9 +38,9 @@ void TrajPlotter::Add(PlotterPtr plotter) {
   m_plotters.push_back(plotter);
 }
 
-void TrajPlotter::AddAnimation(ConfigurationPtr rad, TrajArray* trajPtr) {
+void TrajPlotter::AddAnimation(ConfigurationPtr rad, TrajArray traj) {
   m_obstacleConfig = rad;
-  m_obstacleTrajPtr = trajPtr;
+  m_obstacleTraj = traj;
 }
 
 void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
@@ -71,11 +71,17 @@ void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody)
 
   viewer->AnimateKinBody(body, joint_inds, traj, m_dt);
 
-  if (m_obstacleTrajPtr != nullptr && m_obstacleConfig != nullptr) {
+  if (m_obstacleConfig != nullptr && m_obstacleTraj.rows() > 0) {
     KinBodyPtr body = m_obstacleConfig->GetBodies().front();
     vector<int> joint_inds = m_obstacleConfig->GetJointIndices();
 
-    viewer->AnimateKinBody(body, joint_inds, *m_obstacleTrajPtr, m_dt);
+    viewer->AnimateKinBody(body, joint_inds, m_obstacleTraj, m_dt);
+    if (m_obstacleTraj.rows() != traj.rows()) {
+      // TODO: osg do not sync time across different animations. If LOOP mode is used and, the animations with different
+      // duration will be out of sync. As we assume constant delta time, we just check the length of the trajectories.
+      // Find a better way to handle it.
+      throw std::runtime_error("[TrajPlotter::OptimizerAnimationCallback]Trajectory lengths do not match");
+    }
   }
 
   viewer->Idle();
@@ -88,8 +94,8 @@ void TrajPlotter::PlotBodyTrajectory(vector<GraphHandlePtr>& handles, KinBodyPtr
   Transform lastTransform;
   for (int i = 0; i < traj.rows(); ++i) {
     m_config->SetDOFValues(toDblVec(traj.row(i)));
-    if (m_obstacleConfig != nullptr && m_obstacleTrajPtr != nullptr) {
-      m_obstacleConfig->SetDOFValues(toDblVec(m_obstacleTrajPtr->row(i)));
+    if (m_obstacleConfig != nullptr && m_obstacleTraj.rows() > 0) {
+      m_obstacleConfig->SetDOFValues(toDblVec(m_obstacleTraj.row(i)));
     }
     double squareDist = (lastTransform.inverse() * m_config->GetEETransform()).trans.lengthsqr3();
     if (i == traj.rows() - 1 || squareDist > 0.01) {  // if last point or decimation point

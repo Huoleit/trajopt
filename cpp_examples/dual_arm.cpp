@@ -68,7 +68,7 @@ int main() {
 
   plotter.Add(prob->getCosts());
   plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
-  plotter.AddAnimation(prob->GetObstacleRad(), &prob->GetObstacleRadTraj());
+  plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
   // opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
   opt.initialize(trajToDblVec(prob->GetInitTraj()));

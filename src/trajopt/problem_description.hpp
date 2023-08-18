@@ -26,6 +26,10 @@ struct ProblemConstructionInfo;
 struct TrajOptResult;
 typedef boost::shared_ptr<TrajOptResult> TrajOptResultPtr;
 
+struct ObstacleArmInfo;
+struct ObstacleArmTrajectoryPlayback;
+typedef boost::shared_ptr<ObstacleArmTrajectoryPlayback> ObstacleArmTrajectoryPlaybackPtr;
+
 TrajOptProbPtr TRAJOPT_API ConstructProblem(const ProblemConstructionInfo&);
 TrajOptProbPtr TRAJOPT_API ConstructProblem(const Json::Value&, OpenRAVE::EnvironmentBasePtr env);
 TrajOptResultPtr TRAJOPT_API OptimizeProblem(TrajOptProbPtr, bool plot);
@@ -49,11 +53,11 @@ class TRAJOPT_API TrajOptProb : public OptProb {
   ~TrajOptProb() {}
 
   void SetObstacleRad(ConfigurationPtr obstacleRad) { m_obstacleRad = obstacleRad; }
-  void SetObstacleRadTraj(const TrajArray& traj);
+  void SetupObstacleRadTrajPlayback(const ObstacleArmInfo& info);
   ConfigurationPtr GetObstacleRad() const { return m_obstacleRad; }
-  const TrajArray& GetObstacleRadTraj() const { return m_obstacleRad_traj; }
-  TrajArray& GetObstacleRadTraj() { return m_obstacleRad_traj; }
-  DblVec GetObstacleRadTrajRow(int i);
+  TrajArray GetObstacleRadTraj(int from, int to) const;
+
+  DblVec GetObstacleRadTrajAtTimestamp(int i);
 
   VarVector GetVarRow(int i) { return m_traj_vars.row(i); }
   Var& GetVar(int i, int j) { return m_traj_vars.at(i, j); }
@@ -80,7 +84,9 @@ class TRAJOPT_API TrajOptProb : public OptProb {
   TrajPlotterPtr m_trajplotter;
 
   ConfigurationPtr m_obstacleRad;
-  TrajArray m_obstacleRad_traj;
+  // Playback is construct during the problem construction but also shared with other classes (e.g.
+  // TemporalCollisionInfo in sipp package)
+  ObstacleArmTrajectoryPlaybackPtr m_obstacleRad_traj_playback;
 };
 
 void TRAJOPT_API SetupPlotting(TrajOptProb& prob, Optimizer& opt);
@@ -111,6 +117,15 @@ struct ObstacleArmInfo {
   void fromJson(const Json::Value& v);
 };
 
+struct ObstacleArmTrajectoryPlayback {
+  TrajArray data;
+  ObstacleArmInfo::Type type;
+
+  ObstacleArmTrajectoryPlayback(const ObstacleArmInfo& info);
+  Eigen::VectorXd getStateAtTimestamp(int timestamp) const;
+  TrajArray retrieveTrajectory(int from, int to) const;  // [from, to] include both ends getStateAtTimestamp(i) is
+                                                         // equivalent to retrieveTrajectory(i, i)
+};
 /**
 Initialization info read from json
 */

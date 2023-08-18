@@ -1192,7 +1192,10 @@ void BulletCollisionChecker::CheckShapeCast(btCollisionShape* shape, const btTra
     obj->setWorldTransform(tf0);
     obj->m_index = cow->m_index;
     CastCollisionCollector cc(collisions, obj, this);
-    cc.m_collisionFilterMask = -1;  // Allow all collisions
+    cc.m_collisionFilterMask =
+        KinBodyFilter;  // TODO: this is a hack. Continues collision checking will cause
+                        // self-collision that is undetectable during the ignore zero state collision phase. Here, we
+                        // use this filter to check the collision with the environment only.
     // cc.m_collisionFilterGroup = cow->m_collisionFilterGroup;
     world->contactTest(obj, cc);
     delete obj;
