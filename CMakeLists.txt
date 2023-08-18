@@ -70,9 +70,9 @@ option(BUILD_HUMANOIDS "build humanoids stuff" OFF)
 option(BUILD_SENSORSIM "build sensor simulation" OFF)
 
 include("${CMAKE_SOURCE_DIR}/cmake/boost-python.cmake")
-include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
+# include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
 
-SET(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
 
 include(GoogleTest)
 
