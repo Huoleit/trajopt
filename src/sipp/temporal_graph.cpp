@@ -102,7 +102,7 @@ void RobotCollisionGeometry::createCollisionGeometriesAtState(
   }
 }
 
-void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_time,
+void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_num_timestamp,
                                                    std::vector<TimeInterval>& safe_intervals) {
   int current = -1;
   int next;
@@ -112,37 +112,35 @@ void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& colli
       safe_intervals.push_back({current + 1, next - 1});
     }
   }
-  if (current + 1 < max_time) {  // last safe interval
-    safe_intervals.push_back({current + 1, max_time - 1});
+  if (current + 1 < max_num_timestamp) {  // last safe interval
+    safe_intervals.push_back({current + 1, max_num_timestamp - 1});
   }
 }
 
 TemporalCollisionInfo::TemporalCollisionInfo(double dt) : m_dt(dt){};
 
-void TemporalCollisionInfo::hatch(trajopt::TrajArray& reference_traj, trajopt::TrajArray& obstacle_traj,
+void TemporalCollisionInfo::hatch(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
                                   RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle) {
-  if (reference_traj.rows() != obstacle_traj.rows()) {
-    throw std::runtime_error(
-        "The number of rows in the reference trajectory and the obstacle trajectory must be the same");
-  }
+  int N_ref = reference_traj.rows();  // Number of nominal states of the robot
+  int N_obs = obstacle_traj.rows();   // Number of states of the obstacle
 
-  int N = reference_traj.rows();
-
-  m_reference_states.resize(N);
-  m_obstacle_states_.resize(N);
+  m_reference_states.resize(N_ref);
+  m_obstacle_states_.resize(N_obs);
 
   // Construct nominal states with collision geometries information
-  for (int i = 0; i < N; ++i) {
-    m_reference_states[i].time = m_dt;
+  for (int i = 0; i < N_ref; ++i) {
+    m_reference_states[i].time = m_dt * (double)i;
     m_reference_states[i].state = reference_traj.row(i);
     robot.createCollisionGeometriesAtState(m_reference_states[i].state, m_reference_states[i].collision_geometries);
-
-    m_obstacle_states_[i].time = m_dt;
+  }
+  // Construct states for obstacle
+  for (int i = 0; i < N_obs; ++i) {
+    m_obstacle_states_[i].time = m_dt * (double)i;
     m_obstacle_states_[i].state = obstacle_traj.row(i);
     obstacle.createCollisionGeometriesAtState(m_obstacle_states_[i].state, m_obstacle_states_[i].collision_geometries);
   }
 
-  for (int i = 0; i < N; ++i) {  // Obstacle is moving - iterate all possible states for obstacle
+  for (int i = 0; i < N_obs; ++i) {  // Obstacle is moving - iterate all possible states for obstacle
     auto& obstacle_state = m_obstacle_states_[i];
     // Check which robot state is collided with the obstacle at time i
     for (auto& robot_state : m_reference_states) {
@@ -155,7 +153,8 @@ void TemporalCollisionInfo::hatch(trajopt::TrajArray& reference_traj, trajopt::T
 
   // Construct safe intervals for each state
   for (auto& robot_state : m_reference_states) {
-    constructSafeIntervalsFromCollisionTimestamps(robot_state.collision_timestamp, N, robot_state.safe_intervals);
+    constructSafeIntervalsFromCollisionTimestamps(robot_state.collision_timestamp, std::max(N_ref, N_obs),
+                                                  robot_state.safe_intervals);
   }
 }
 

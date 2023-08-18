@@ -1,4 +1,4 @@
-include_directories(${GTEST_INCLUDE_DIRS})
+include_directories(${GTEST_INCLUDE_DIRS}  ${Boost_INCLUDE_DIRS})
 add_executable(test_sipp
   test_sipp.cpp
 )

@@ -2,6 +2,7 @@
 #include <openrave-core.h>
 #include <openrave/openrave.h>
 
+#include <boost/format.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -70,20 +71,21 @@ TEST(sipp, sphere_collision_safe_intervals_construction) {
                     4, 0, 0,// collide
                     5, 0, 0;
   // clang-format on
-  TrajArray obstacle_traj(6, 3);
+  TrajArray obstacle_traj(7, 3);
   // clang-format off
   obstacle_traj << 0, 2.2, 0,
                    1, 1.9, 0, 
                    2, 0, 2.1,
                    3, -2, 0,
                    4, 0, 1.9, 
-                   5, 0, 3;
+                   5, 0, 3,
+                   10,11,10;
   // clang-format on
   sipp::TemporalCollisionInfo temporal_info(0.1);
   temporal_info.hatch(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
 
-  vector<vector<TimeInterval>> ans_intervals{{{0, 5}}, {{0, 0}, {2, 5}}, {{0, 5}},
-                                             {{0, 5}}, {{0, 3}, {5, 5}}, {{0, 5}}};
+  vector<vector<TimeInterval>> ans_intervals{{{0, 6}}, {{0, 0}, {2, 6}}, {{0, 6}},
+                                             {{0, 6}}, {{0, 3}, {5, 6}}, {{0, 6}}};
   vector<vector<int>> ans_collision_timestamps{{}, {1}, {}, {}, {4}, {}};
 
   for (int i = 0; i < temporal_info.getNumberOfStates(); ++i) {
@@ -99,6 +101,47 @@ TEST(sipp, sphere_collision_safe_intervals_construction) {
         << error_string(i, ans_intervals[i], state.safe_intervals);
 
     ASSERT_EQ(state.safe_intervals, ans_intervals[i]) << error_string(i, ans_intervals[i], state.safe_intervals);
+  }
+}
+
+void validate_strategy(const vector<TimeStrategyKnot>& strategy, const std::vector<NominalState>& states) {
+  // Arrival time should be monotonically increasing
+  for (int i = 0; i < strategy.size() - 1; ++i) {
+    EXPECT_TRUE(strategy[i + 1].arrival_time > strategy[i].arrival_time)
+        << boost::format("Arrive time should be monotonically increasing at step %1%") % i;
+  }
+
+  // waiting_duration should be non-negative
+  for (int i = 0; i < strategy.size(); ++i) {
+    EXPECT_TRUE(strategy[i].waiting_duration >= 0)
+        << boost::format("Waiting duration should be non-negative at step %1%") % i;
+  }
+
+  // Arrival time + waiting duration should be less than the arrival time of next step
+  for (int i = 0; i < strategy.size() - 1; ++i) {
+    EXPECT_TRUE(strategy[i].arrival_time + strategy[i].waiting_duration < strategy[i + 1].arrival_time)
+        << boost::format(
+               "Arrival time + waiting duration should be less than the arrival time of next step at step %1%") %
+               i;
+  }
+
+  // Arrival time + waiting duration should be within the safe interval
+  for (int i = 0; i < strategy.size(); ++i) {
+    const NominalState& state = states[strategy[i].state_index];
+    bool found = false;
+    for (int j = 0; j < state.safe_intervals.size(); ++j) {
+      const TimeInterval& interval = state.safe_intervals[j];
+      if (interval.isInside(strategy[i].arrival_time) &&
+          interval.isInside(strategy[i].arrival_time + strategy[i].waiting_duration)) {
+        found = true;
+        break;
+      }
+    }
+    EXPECT_TRUE(found)
+        << boost::format("Arrival time + waiting duration should be within the safe interval at step %1%") % i << "\n"
+        << "Safe intervals: " << state.safe_intervals << "\n"
+        << "Arrival time: " << strategy[i].arrival_time << "\n"
+        << "Waiting duration: " << strategy[i].waiting_duration;
   }
 }
 
@@ -119,6 +162,8 @@ TEST(sipp, graph_search) {
 
   TemporalGraph graph(info);
   std::vector<TimeStrategyKnot> result = graph.getStrategy();
+
+  validate_strategy(result, info.getStatesContainer());
   cout << result << endl;
 }
 
@@ -158,5 +203,7 @@ TEST(sipp, graph_search_switch_path) {
 
   TemporalGraph graph(info);
   std::vector<TimeStrategyKnot> result = graph.getStrategy();
+
+  validate_strategy(result, info.getStatesContainer());
   cout << result << endl;
 }

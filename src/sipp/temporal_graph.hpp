@@ -3,9 +3,11 @@
 #include <Eigen/Core>
 #include <iostream>
 #include <string>
-#include <trajopt/collision_checker.hpp>
-#include <trajopt/typedefs.hpp>
 #include <vector>
+
+#include "trajopt/collision_checker.hpp"
+#include "trajopt/problem_description.hpp"
+#include "trajopt/typedefs.hpp"
 
 namespace sipp {
 
@@ -17,6 +19,8 @@ struct TimeInterval {
 
   bool isOverlapped(const TimeInterval& other) const { return !(end < other.start || other.end < start); }
   TimeInterval intersect(const TimeInterval& other) const;  // call this only if isOverlapped returns true
+
+  bool isInside(TimeType time) const { return start <= time && time <= end; }
 
   bool operator==(const TimeInterval& other) const { return start == other.start && end == other.end; }
 };
@@ -60,8 +64,8 @@ class RobotCollisionGeometry {
 class TemporalCollisionInfo {
  public:
   TemporalCollisionInfo(double dt);
-  void hatch(trajopt::TrajArray& reference_traj, trajopt::TrajArray& obstacle_traj, RobotCollisionGeometry& robot,
-             RobotCollisionGeometry& obstacle);
+  void hatch(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
+             RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle);
 
   int getNumberOfAllSafeIntervals() const;
   std::vector<int> getNumberOfSafeIntervals() const;
@@ -110,7 +114,7 @@ class TemporalGraph {
   std::vector<int> m_start_index_of_node;
 };
 
-void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_time,
+void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_num_timestamp,
                                                    std::vector<TimeInterval>& safe_intervals);
 
 std::ostream& operator<<(std::ostream& os, const TimeInterval& interval);
