@@ -121,3 +121,42 @@ TEST(sipp, graph_search) {
   std::vector<TimeStrategyKnot> result = graph.getStrategy();
   cout << result << endl;
 }
+
+TEST(sipp, graph_search_no_solution) {
+  MockTemporalCollisionInfo info;
+
+  NominalState state_0;
+  state_0.safe_intervals = {{0, 10}};
+  info.getStatesContainer().push_back(state_0);
+
+  NominalState state_1;
+  state_1.safe_intervals = {{0, 5}, {7, 10}};
+  info.getStatesContainer().push_back(state_1);
+
+  NominalState state_2;
+  state_2.safe_intervals = {{12, 12}};
+  info.getStatesContainer().push_back(state_2);
+
+  TemporalGraph graph(info);
+  EXPECT_THROW(graph.getStrategy(), std::runtime_error);
+}
+
+TEST(sipp, graph_search_switch_path) {
+  MockTemporalCollisionInfo info;
+
+  NominalState state_0;
+  state_0.safe_intervals = {{0, 10}};
+  info.getStatesContainer().push_back(state_0);
+
+  NominalState state_1;
+  state_1.safe_intervals = {{0, 5}, {7, 10}};
+  info.getStatesContainer().push_back(state_1);
+
+  NominalState state_2;
+  state_2.safe_intervals = {{7, 10}};
+  info.getStatesContainer().push_back(state_2);
+
+  TemporalGraph graph(info);
+  std::vector<TimeStrategyKnot> result = graph.getStrategy();
+  cout << result << endl;
+}

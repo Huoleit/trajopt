@@ -7,6 +7,7 @@ target_link_libraries(test_sipp
   gtest_main
 )
 target_compile_definitions(test_sipp PRIVATE TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data/")
+gtest_add_tests(TARGET  test_sipp)
 
 add_executable(plot_collision_geometries
   plot_collision_geometries.cpp
