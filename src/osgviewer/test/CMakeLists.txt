@@ -19,3 +19,6 @@ target_link_libraries(robot_animation ${OSG_LIBRARIES})
 
 add_executable(viewer_animation viewer_animation.cpp)
 target_link_libraries(viewer_animation ${OpenRAVE_BOTH_LIBRARIES} ${Boost_SYSTEM_LIBRARY} osgviewer)
+
+add_executable(osg_async_animation osg_async_animation.cpp)
+target_link_libraries(osg_async_animation osgviewer)
