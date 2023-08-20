@@ -87,6 +87,31 @@ void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody)
   viewer->Idle();
 }
 
+void TrajPlotter::StrategyAnimationCallback(const TrajArray& traj) {
+  OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
+  vector<GraphHandlePtr> handles;
+
+  KinBodyPtr body = m_config->GetBodies().front();
+  vector<int> joint_inds = m_config->GetJointIndices();
+
+  viewer->AnimateKinBody(body, joint_inds, traj, m_dt);
+
+  if (m_obstacleConfig != nullptr && m_obstacleTraj.rows() > 0) {
+    KinBodyPtr body = m_obstacleConfig->GetBodies().front();
+    vector<int> joint_inds = m_obstacleConfig->GetJointIndices();
+
+    viewer->AnimateKinBody(body, joint_inds, m_obstacleTraj, m_dt);
+    if (m_obstacleTraj.rows() != traj.rows()) {
+      // TODO: osg do not sync time across different animations. If LOOP mode is used and, the animations with different
+      // duration will be out of sync. As we assume constant delta time, we just check the length of the trajectories.
+      // Find a better way to handle it.
+      throw std::runtime_error("[TrajPlotter::StrategyAnimationCallback]Trajectory lengths do not match");
+    }
+  }
+
+  viewer->Idle();
+}
+
 void TrajPlotter::PlotBodyTrajectory(vector<GraphHandlePtr>& handles, KinBodyPtr body, const TrajArray& traj) const {
   OSGViewerPtr viewer = OSGViewer::GetOrCreate(m_env);
   vector<TrajArray> linktrajs(m_links.size(), TrajArray(traj.rows(), 3));

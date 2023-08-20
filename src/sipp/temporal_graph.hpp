@@ -116,6 +116,7 @@ class TemporalGraph {
 
 void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& collision_timestamps, int max_num_timestamp,
                                                    std::vector<TimeInterval>& safe_intervals);
+trajopt::TrajArray ConstructTrajArrayFromStrategy(const std::vector<TimeStrategyKnot>& strategy);
 
 std::ostream& operator<<(std::ostream& os, const TimeInterval& interval);
 std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& interval);

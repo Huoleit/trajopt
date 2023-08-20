@@ -54,28 +54,45 @@ int main() {
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
   TrajOptProbPtr prob = ConstructProblem(pci);
 
+  BasicTrustRegionSQP opt(prob);
+  opt.initialize(trajToDblVec(prob->GetInitTraj()));
+  opt.optimize();
+
+  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
+  plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
+  plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
+
   double radius = 0.07;
   sipp::RobotCollisionGeometry robot_collision_geometry(pci.rad);
-  robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, -0.03), radius, "right_link_palm");
+  robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.05), radius, "right_link_palm");
+  robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "right_link_palm");
+  robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, -0.07), radius, "right_link_palm");
   robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "right_link_sri_ft");
   robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "right_link_5");
   robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.16), radius, "right_link_4");
   robot_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.1), radius, "right_link_4");
 
   sipp::RobotCollisionGeometry obstacle_collision_geometry(pci.obstacleRad);
-  obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, -0.03), radius, "left_link_palm");
+  obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.05), radius, "left_link_palm");
+  obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "left_link_palm");
+  obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, -0.07), radius, "left_link_palm");
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "left_link_sri_ft");
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0), radius, "left_link_5");
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.16), radius, "left_link_4");
   obstacle_collision_geometry.addSphere(Eigen::Vector3d(0, 0, 0.1), radius, "left_link_4");
 
-  BasicTrustRegionSQP opt(prob);
-  opt.initialize(trajToDblVec(prob->GetInitTraj()));
-  opt.optimize();
-
   TrajArray nominal_traj = getTraj(opt.x(), prob->GetVars());
-  // sipp::TemporalCollisionInfo t_info(nominal_traj, pci.obstacle_info.data, robot_collision_geometry,
-  //                                    obstacle_collision_geometry);
+  sipp::TemporalCollisionInfo temporal_collision_info(pci.basic_info.dt);
+  temporal_collision_info.hatch(nominal_traj, prob->GetObstacleRadTraj(0, prob->GetNumSteps() * 3),
+                                robot_collision_geometry, obstacle_collision_geometry);
+  sipp::TemporalGraph graph(temporal_collision_info);
+  std::vector<sipp::TimeStrategyKnot> strategy = graph.getStrategy();
+
+  // ProblemConstructionInfo pci_with_time_strategy = pci;
+
+  TrajArray res = sipp::ConstructTrajArrayFromStrategy(strategy);
+  plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, res.rows() - 1));
+  plotter.StrategyAnimationCallback(res);
 
   viewer.reset();
   env.reset();

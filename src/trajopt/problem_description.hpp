@@ -114,15 +114,17 @@ struct ObstacleArmInfo {
   enum Type { LOOP = 0, STOP };
   Type type;
   TrajArray data;  // obstacle trajectory
+  int offset;      // offset of the obstacle trajectory in the whole trajectory
   void fromJson(const Json::Value& v);
 };
 
 struct ObstacleArmTrajectoryPlayback {
   TrajArray data;
   ObstacleArmInfo::Type type;
+  int offset;
 
   ObstacleArmTrajectoryPlayback(const ObstacleArmInfo& info);
-  Eigen::VectorXd getStateAtTimestamp(int timestamp) const;
+  Eigen::VectorXd getStateAtTimestamp(int i) const;
   TrajArray retrieveTrajectory(int from, int to) const;  // [from, to] include both ends getStateAtTimestamp(i) is
                                                          // equivalent to retrieveTrajectory(i, i)
 };

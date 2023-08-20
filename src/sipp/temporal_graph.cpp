@@ -40,7 +40,8 @@ std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& inte
 
 std::ostream& operator<<(std::ostream& os, const TimeStrategyKnot& knot) {
   os << "\033[34m" << knot.state_index << "\033[0m: arrive at time \033[33m" << knot.arrival_time
-     << "\033[0m and wait for \033[33m" << knot.waiting_duration << "\033[0m steps. Configuration : " << knot.state;
+     << "\033[0m and wait for \033[33m" << knot.waiting_duration
+     << "\033[0m steps. Configuration : " << knot.state.transpose();
   return os;
 }
 std::ostream& operator<<(std::ostream& os, const std::vector<TimeStrategyKnot>& strategy) {
@@ -300,6 +301,20 @@ std::vector<TimeStrategyKnot> TemporalGraph::getStrategy() {
   std::reverse(strategy.begin(), strategy.end());
 
   return strategy;
+}
+
+trajopt::TrajArray ConstructTrajArrayFromStrategy(const std::vector<TimeStrategyKnot>& strategy) {
+  trajopt::TrajArray traj(strategy.back().arrival_time + 1, strategy.front().state.size());
+  int cur_time = 0;
+  for (int i = 0; i < strategy.size(); ++i) {
+    traj.row(cur_time) = strategy[i].state;
+    ++cur_time;
+    for (int j = 0; j < strategy[i].waiting_duration; ++j) {
+      traj.row(cur_time) = strategy[i].state;
+      ++cur_time;
+    }
+  }
+  return traj;
 }
 
 }  // namespace sipp

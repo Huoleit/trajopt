@@ -137,6 +137,7 @@ void ObstacleArmInfo::fromJson(const Json::Value& v) {
 
   string type_str;
   childFromJson(v, type_str, "type", string("loop"));
+  childFromJson(v, offset, "offset", 0);
 
   if (type_str == "loop") {
     type = ObstacleArmInfo::LOOP;
@@ -156,8 +157,10 @@ void ObstacleArmInfo::fromJson(const Json::Value& v) {
 }
 
 ObstacleArmTrajectoryPlayback::ObstacleArmTrajectoryPlayback(const ObstacleArmInfo& info)
-    : data(info.data), type(info.type) {}
-VectorXd ObstacleArmTrajectoryPlayback::getStateAtTimestamp(int timestamp) const {
+    : data(info.data), type(info.type), offset(info.offset) {}
+VectorXd ObstacleArmTrajectoryPlayback::getStateAtTimestamp(int i) const {
+  int timestamp = i + offset;
+
   if (type == ObstacleArmInfo::LOOP) {
     return data.row(timestamp % data.rows());
   } else if (type == ObstacleArmInfo::STOP) {
