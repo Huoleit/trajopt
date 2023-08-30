@@ -154,6 +154,8 @@ void ObstacleArmInfo::fromJson(const Json::Value& v) {
     fromJsonArray(traj[i], row, n_dof);
     data.row(i) = toVectorXd(row);
   }
+
+  while (offset < 0) offset += data.rows();
 }
 
 ObstacleArmTrajectoryPlayback::ObstacleArmTrajectoryPlayback(const ObstacleArmInfo& info)
@@ -487,12 +489,16 @@ void JointPosCostInfo::fromJson(const Value& v) {
   childFromJson(params, vals, "vals");
   childFromJson(params, coeffs, "coeffs");
 
-  if (coeffs.size() == 1) coeffs = DblVec(n_steps, coeffs[0]);
-
   int n_dof = gPCI->rad->GetDOF();
   if (vals.size() != n_dof) {
     PRINT_AND_THROW(boost::format("wrong number of dof vals. expected %i got %i") % n_dof % vals.size());
   }
+  if (coeffs.size() == 1)
+    coeffs = DblVec(n_dof, coeffs[0]);
+  else if (coeffs.size() != n_dof) {
+    PRINT_AND_THROW(boost::format("wrong number of coeffs. expected %i got %i") % n_dof % coeffs.size());
+  }
+
   childFromJson(params, timestep, "timestep", gPCI->basic_info.n_steps - 1);
   childFromJson(params, duration, "duration", 1);
   if (timestep + duration > n_steps) {
