@@ -25,3 +25,6 @@ target_link_libraries(time_optimal_no_collision trajopt osgviewer)
 
 add_executable(spatial_temporal_opt spatial_temporal_opt.cpp)
 target_link_libraries(spatial_temporal_opt sipp osgviewer)
+
+add_executable(with_time_profile with_time_profile.cpp)
+target_link_libraries(with_time_profile sipp osgviewer)
