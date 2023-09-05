@@ -216,7 +216,11 @@
         "guieventhandler": "cpp",
         "guiactionadapter": "cpp",
         "eventqueue": "cpp",
-        "stdvector": "cpp"
+        "stdvector": "cpp",
+        "config": "cpp",
+        "font": "cpp",
+        "glyph": "cpp",
+        "text": "cpp"
     },
     "cSpell.words": [
         "aabb",
@@ -236,6 +240,7 @@
         "Eigen",
         "endjoints",
         "GEOMPROPERTIES",
+        "getSuccesors",
         "idof",
         "inds",
         "Ineq",
@@ -261,6 +266,7 @@
         "rotationaxis",
         "shapehull",
         "shouldnt",
+        "sipp",
         "startjoints",
         "startpoint",
         "subshape",

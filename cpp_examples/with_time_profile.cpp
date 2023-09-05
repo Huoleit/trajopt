@@ -42,6 +42,10 @@ int main() {
     bool success = env->Load(getDataPath() + "/abb/model.xml");
     FAIL_IF_FALSE(success);
   }
+  // {
+  //   bool success = env->Load(getDataPath() + "/table.xml");
+  //   FAIL_IF_FALSE(success);
+  // }
   viewer.reset(new OSGViewer(env));
   viewer->UpdateSceneData();
   env->AddViewer(viewer);
@@ -53,7 +57,7 @@ int main() {
   robot->SetTransform(I);
 
   ProblemConstructionInfo pci(env);
-  Json::Value root = readJsonFile(getConfigPath() + "/abb/above.json");
+  Json::Value root = readJsonFile(getConfigPath() + "/abb/time_profile.json");
   pci.fromJson(root);
   pci.rad->SetRobotActiveDOFs();
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
@@ -63,6 +67,7 @@ int main() {
   TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
 
   plotter.Add(prob->getCosts());
+  plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
   plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
   // opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
@@ -90,7 +95,7 @@ int main() {
     axesPtr.push_back(viewer->PlotAxes(identity, 0.1));
 
     plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
-  }  // end scope for axesPtr - axes should be removed before viewer is destroyed
+  }
 
   viewer.reset();
   env.reset();

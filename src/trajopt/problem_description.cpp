@@ -130,7 +130,6 @@ void BasicInfo::fromJson(const Json::Value& v) {
 
 void ObstacleArmInfo::fromJson(const Json::Value& v) {
   unsigned int n_dof = gPCI->obstacleRad->GetDOF();
-  unsigned int n_steps = gPCI->basic_info.n_steps;
 
   if (!v.isMember("data")) PRINT_AND_THROW("obstacle_manip specified but no data inside obstacle_traj is given");
 
@@ -138,33 +137,51 @@ void ObstacleArmInfo::fromJson(const Json::Value& v) {
 
   string type_str;
   childFromJson(v, type_str, "type", string("loop"));
+  childFromJson(v, offset, "offset", 0);
 
-  data.resize(n_steps, n_dof);
+  if (type_str == "loop") {
+    type = ObstacleArmInfo::LOOP;
+  } else if (type_str == "stop") {
+    type = ObstacleArmInfo::STOP;
+  } else {
+    PRINT_AND_THROW(boost::format("invalid type: %s (Possible type: loop, stop)") % type_str);
+  }
 
-  for (int i = 0; i < std::min(traj.size(), n_steps); ++i) {
+  data.resize(traj.size(), n_dof);
+
+  for (int i = 0; i < traj.size(); ++i) {
     DblVec row;
     fromJsonArray(traj[i], row, n_dof);
     data.row(i) = toVectorXd(row);
   }
 
-  if (traj.size() < n_steps) {
-    if (type_str == "loop") {
-      int repeat = n_steps / traj.size();
-      int remainder = n_steps % traj.size();
+  while (offset < 0) offset += data.rows();
+}
 
-      for (int i = 1; i < repeat; ++i) {
-        data.middleRows(i * traj.size(), traj.size()) = data.topRows(traj.size());
-      }
+ObstacleArmTrajectoryPlayback::ObstacleArmTrajectoryPlayback(const ObstacleArmInfo& info)
+    : data(info.data), type(info.type), offset(info.offset) {}
+VectorXd ObstacleArmTrajectoryPlayback::getStateAtTimestamp(int i) const {
+  int timestamp = i + offset;
 
-      if (remainder > 0) {
-        data.bottomRows(remainder) = data.topRows(remainder);
-      }
-    } else if (type_str == "stop") {
-      data.bottomRows(n_steps - traj.size()) = data.row(traj.size() - 1).replicate(n_steps - traj.size(), 1);
+  if (type == ObstacleArmInfo::LOOP) {
+    return data.row(timestamp % data.rows());
+  } else if (type == ObstacleArmInfo::STOP) {
+    if (timestamp < data.rows()) {
+      return data.row(timestamp);
     } else {
-      PRINT_AND_THROW(boost::format("invalid type: %s") % type_str);
+      return data.row(data.rows() - 1);
     }
+  } else {
+    PRINT_AND_THROW(boost::format("invalid type: %i") % type);
   }
+}
+
+TrajArray ObstacleArmTrajectoryPlayback::retrieveTrajectory(int from, int to) const {
+  TrajArray traj(to - from + 1, data.cols());
+  for (int i = from; i <= to; ++i) {
+    traj.row(i - from) = getStateAtTimestamp(i);
+  }
+  return traj;
 }
 
 ////
@@ -347,7 +364,7 @@ TrajOptProbPtr ConstructProblem(const ProblemConstructionInfo& pci) {
 
   if (pci.obstacleRad != nullptr) {
     prob->SetObstacleRad(pci.obstacleRad);
-    prob->SetObstacleRadTraj(pci.obstacle_info.data);
+    prob->SetupObstacleRadTrajPlayback(pci.obstacle_info);
   }
 
   BOOST_FOREACH (const TermInfoPtr& ci, pci.cost_infos) { ci->hatch(*prob); }
@@ -391,23 +408,30 @@ TrajOptProb::TrajOptProb(int n_steps, ConfigurationPtr rad, double dt) : m_rad(r
 
 TrajOptProb::TrajOptProb() {}
 
-void TrajOptProb::SetObstacleRadTraj(const TrajArray& traj) {
+void TrajOptProb::SetupObstacleRadTrajPlayback(const ObstacleArmInfo& info) {
   if (m_obstacleRad == nullptr) {
-    throw std::runtime_error("[TrajOptProb::SetObstacleRadTraj]Obstacle robot is not initialized");
-  }
-  if (traj.rows() != m_traj_vars.rows()) {
-    throw std::runtime_error(
-        "[TrajOptProb::SetObstacleRadTraj]Obstacle trajectory size does not match the trajectory size");
-  }
-  if (traj.cols() != m_obstacleRad->GetDOF()) {
-    throw std::runtime_error("[TrajOptProb::SetObstacleRadTraj]Obstacle trajectory size does not match the robot size");
+    throw std::runtime_error("[TrajOptProb::SetupObstacleRadTrajPlayback]Obstacle robot is not initialized");
   }
 
-  m_obstacleRad_traj = traj;
+  m_obstacleRad_traj_playback.reset(new ObstacleArmTrajectoryPlayback(info));
 }
 
-DblVec TrajOptProb::GetObstacleRadTrajRow(int i) {
-  return toDblVec(m_obstacleRad_traj.row(i));
+DblVec TrajOptProb::GetObstacleRadTrajAtTimestamp(int i) {
+  if (m_obstacleRad_traj_playback == nullptr) {
+    throw std::runtime_error(
+        "[TrajOptProb::GetObstacleRadTrajAtTimestamp]Obstacle trajectory playback is not "
+        "initialized. Call SetupObstacleRadTrajPlayback() first");
+  }
+  return toDblVec(m_obstacleRad_traj_playback->getStateAtTimestamp(i));
+}
+
+TrajArray TrajOptProb::GetObstacleRadTraj(int from, int to) const {
+  if (m_obstacleRad_traj_playback == nullptr) {
+    throw std::runtime_error(
+        "[TrajOptProb::GetObstacleRadTraj]Obstacle trajectory playback is not "
+        "initialized. Call SetupObstacleRadTrajPlayback() first");
+  }
+  return m_obstacleRad_traj_playback->retrieveTrajectory(from, to);
 }
 
 void SetupPlotting(TrajOptProb& prob, Optimizer& opt) {
@@ -465,12 +489,16 @@ void JointPosCostInfo::fromJson(const Value& v) {
   childFromJson(params, vals, "vals");
   childFromJson(params, coeffs, "coeffs");
 
-  if (coeffs.size() == 1) coeffs = DblVec(n_steps, coeffs[0]);
-
   int n_dof = gPCI->rad->GetDOF();
   if (vals.size() != n_dof) {
     PRINT_AND_THROW(boost::format("wrong number of dof vals. expected %i got %i") % n_dof % vals.size());
   }
+  if (coeffs.size() == 1)
+    coeffs = DblVec(n_dof, coeffs[0]);
+  else if (coeffs.size() != n_dof) {
+    PRINT_AND_THROW(boost::format("wrong number of coeffs. expected %i got %i") % n_dof % coeffs.size());
+  }
+
   childFromJson(params, timestep, "timestep", gPCI->basic_info.n_steps - 1);
   childFromJson(params, duration, "duration", 1);
   if (timestep + duration > n_steps) {
@@ -636,7 +664,7 @@ void CollisionCostInfo::hatch(TrajOptProb& prob) {
         for (int i = first_step; i <= last_step - gap; ++i) {
           prob.addCost(CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
                                                  prob.GetVarRow(i), prob.GetVarRow(i + gap), prob.GetObstacleRad(),
-                                                 prob.GetObstacleRadTrajRow(i))));
+                                                 prob.GetObstacleRadTrajAtTimestamp(i))));
           prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
         }
       } else {
@@ -650,9 +678,9 @@ void CollisionCostInfo::hatch(TrajOptProb& prob) {
     } else {
       if (hasObstacleArm) {
         for (int i = first_step; i <= last_step; ++i) {
-          prob.addCost(
-              CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
-                                        prob.GetVarRow(i), prob.GetObstacleRad(), prob.GetObstacleRadTrajRow(i))));
+          prob.addCost(CostPtr(new CollisionCost(dist_pen[i - first_step], coeffs[i - first_step], prob.GetRAD(),
+                                                 prob.GetVarRow(i), prob.GetObstacleRad(),
+                                                 prob.GetObstacleRadTrajAtTimestamp(i))));
           prob.getCosts().back()->setName((boost::format("%s_%i") % name % i).str());
         }
       } else {

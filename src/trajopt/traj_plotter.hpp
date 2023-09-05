@@ -8,7 +8,7 @@ struct TRAJOPT_API TrajPlotter {
   VarArray m_trajvars;
   vector<PlotterPtr> m_plotters;
   std::set<KinBody::LinkPtr> m_links;  // links for which we'll plot the trajectory
-  TrajArray* m_obstacleTrajPtr;        // pointer to the trajectory of the obstacle
+  TrajArray m_obstacleTraj;            // trajectory of the obstacle
   ConfigurationPtr m_obstacleConfig;
 
   int m_decimation;  // Plot every m_decimation points
@@ -20,9 +20,10 @@ struct TRAJOPT_API TrajPlotter {
   void Add(const vector<PlotterPtr>& plotters);
   void Add(PlotterPtr plotter);
   void AddLink(OpenRAVE::KinBody::LinkPtr link);
-  void AddAnimation(ConfigurationPtr rad, TrajArray* trajPtr);
+  void AddAnimation(ConfigurationPtr rad, TrajArray trajPtr);
   void OptimizerCallback(OptProb*, DblVec& x);
   void OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody = true);
+  void StrategyAnimationCallback(const TrajArray& traj);
   void SetDecimation(int dec) { m_decimation = dec; }
 
  private:

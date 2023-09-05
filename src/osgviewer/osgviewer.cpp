@@ -478,6 +478,7 @@ OSGViewer::OSGViewer(EnvironmentBasePtr env) : ViewerBase(env), m_idling(false) 
   m_viewer.realize();
   m_cam = m_viewer.getCamera();
   m_handler = new EventHandler;
+  m_handler->setHomePosition(osg::Vec3d(3.5, 0, 2), osg::Vec3d(-2, 0, 0), osg::Vec3d(0, 0, 1));
   m_viewer.setCameraManipulator(m_handler.get());
   AddLights(m_root);
   m_cam->setClearColor(osg::Vec4(1, 1, 1, 1));

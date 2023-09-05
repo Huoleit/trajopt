@@ -35,7 +35,8 @@
 				"ms-azuretools.vscode-docker",
 				"ms-python.python",
 				"ZainChen.json",
-				"Meezilla.json"
+				"Meezilla.json",
+				"redhat.vscode-xml"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",
