@@ -54,12 +54,13 @@ int main() {
   pci.rad->SetDOFValues(toDblVec(pci.init_info.data.row(0)));
   TrajOptProbPtr prob = ConstructProblem(pci);
 
+  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
+  plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
+
   BasicTrustRegionSQP opt(prob);
   opt.initialize(trajToDblVec(prob->GetInitTraj()));
   opt.optimize();
 
-  TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
-  plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
   plotter.OptimizerAnimationCallback(prob.get(), opt.x(), false);
 
   double radius = 0.07;
@@ -83,12 +84,15 @@ int main() {
 
   TrajArray nominal_traj = getTraj(opt.x(), prob->GetVars());
   sipp::TemporalCollisionInfo temporal_collision_info(pci.basic_info.dt);
-  temporal_collision_info.hatch(nominal_traj, prob->GetObstacleRadTraj(0, prob->GetNumSteps() * 3),
-                                robot_collision_geometry, obstacle_collision_geometry);
-  sipp::TemporalGraph graph(temporal_collision_info);
-  std::vector<sipp::TimeStrategyKnot> strategy = graph.getStrategy();
 
-  // ProblemConstructionInfo pci_with_time_strategy = pci;
+  temporal_collision_info.bake(nominal_traj, prob->GetObstacleRadTraj(0, prob->GetNumSteps() * 5),
+                               robot_collision_geometry, obstacle_collision_geometry);
+
+  sipp::TemporalGraph graph(temporal_collision_info);
+  std::vector<sipp::TimeStrategyKnot> strategy;
+  bool isSuccessful = graph.getStrategy(strategy);
+
+  std::cout << strategy << std::endl;
 
   TrajArray res = sipp::ConstructTrajArrayFromStrategy(strategy);
   plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, res.rows() - 1));
