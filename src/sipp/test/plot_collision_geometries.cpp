@@ -64,7 +64,7 @@ int main() {
   TrajArray obstacle_traj(1, 6);
   obstacle_traj.setZero();
 
-  temporal_info.hatch(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
+  temporal_info.bake(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
 
   rad->SetDOFValues(util::toDblVec(temporal_info.getState(0).state));
   std::vector<OpenRAVE::GraphHandlePtr> handles;

@@ -64,8 +64,8 @@ class RobotCollisionGeometry {
 class TemporalCollisionInfo {
  public:
   TemporalCollisionInfo(double dt);
-  void hatch(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
-             RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle);
+  void bake(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
+            RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle);
 
   int getNumberOfAllSafeIntervals() const;
   std::vector<int> getNumberOfSafeIntervals() const;
@@ -95,6 +95,8 @@ struct TemporalGraphNode {
 struct TimeStrategyKnot {
   int arrival_time;
   int waiting_duration;
+  bool isConfident;  //!< If the robot is confident that the other manipulator will not collide with it. A valid time
+                     //!< policy is found.
 
   int state_index;
   Eigen::VectorXd state;  //!< The state of the robot at the given time
@@ -103,10 +105,11 @@ class TemporalGraph {
  public:
   TemporalGraph(const TemporalCollisionInfo& temporal_collision_info);
   bool validate() const;
-  std::vector<TimeStrategyKnot> getStrategy();
+  bool getStrategy(std::vector<TimeStrategyKnot>& strategy);
 
  private:
   std::vector<TemporalGraphNode*> getSuccesors(TemporalGraphNode* node);
+  void constructStrategy(std::vector<TimeStrategyKnot>& strategy);
 
  private:
   const TemporalCollisionInfo& m_temporal_collision_info;

@@ -39,9 +39,10 @@ std::ostream& operator<<(std::ostream& os, const std::vector<TimeInterval>& inte
 }
 
 std::ostream& operator<<(std::ostream& os, const TimeStrategyKnot& knot) {
-  os << "\033[34m" << knot.state_index << "\033[0m: arrive at time \033[33m" << knot.arrival_time
-     << "\033[0m and wait for \033[33m" << knot.waiting_duration
-     << "\033[0m steps. Configuration : " << knot.state.transpose();
+  Eigen::IOFormat CleanFmt(4, 0, ", ", "\n", "[", "],");
+  os << "\033[34m" << knot.state_index << "(" << (knot.isConfident ? "+" : "-") << ")"
+     << "\033[0m: arrive at time \033[33m" << knot.arrival_time << "\033[0m and wait for \033[33m"
+     << knot.waiting_duration << "\033[0m steps. Configuration : " << knot.state.transpose().format(CleanFmt);
   return os;
 }
 std::ostream& operator<<(std::ostream& os, const std::vector<TimeStrategyKnot>& strategy) {
@@ -120,8 +121,8 @@ void constructSafeIntervalsFromCollisionTimestamps(const std::vector<int>& colli
 
 TemporalCollisionInfo::TemporalCollisionInfo(double dt) : m_dt(dt){};
 
-void TemporalCollisionInfo::hatch(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
-                                  RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle) {
+void TemporalCollisionInfo::bake(const trajopt::TrajArray& reference_traj, const trajopt::TrajArray& obstacle_traj,
+                                 RobotCollisionGeometry& robot, RobotCollisionGeometry& obstacle) {
   int N_ref = reference_traj.rows();  // Number of nominal states of the robot
   int N_obs = obstacle_traj.rows();   // Number of states of the obstacle
 
@@ -235,7 +236,7 @@ std::vector<TemporalGraphNode*> TemporalGraph::getSuccesors(TemporalGraphNode* n
   return successors;
 }
 
-std::vector<TimeStrategyKnot> TemporalGraph::getStrategy() {
+bool TemporalGraph::getStrategy(std::vector<TimeStrategyKnot>& strategy) {
   auto compare = [](TemporalGraphNode* lhs, TemporalGraphNode* rhs) { return *lhs > *rhs; };
   std::priority_queue<TemporalGraphNode*, std::vector<TemporalGraphNode*>, decltype(compare)> open_queue(compare);
   m_nodes.front().arrival_time = 0;
@@ -278,18 +279,36 @@ std::vector<TimeStrategyKnot> TemporalGraph::getStrategy() {
     }
   }
 
-  if (m_nodes.back().state != TemporalGraphNode::CLOSED) {
-    throw std::runtime_error("Cannot find a strategy");
-  }
+  constructStrategy(strategy);
+
+  return m_nodes.back().state == TemporalGraphNode::CLOSED;
+}
+
+void TemporalGraph::constructStrategy(std::vector<TimeStrategyKnot>& strategy) {
+  strategy.clear();
+  strategy.reserve(m_temporal_collision_info.getNumberOfStates());
 
   // back track to construct the strategy
-  std::vector<TimeStrategyKnot> strategy;
-  TemporalGraphNode* current_node = &m_nodes.back();
+  auto node_iter = std::find_if(m_nodes.rbegin(), m_nodes.rend(),
+                                [](TemporalGraphNode& node) { return node.state == TemporalGraphNode::CLOSED; });
+  TemporalGraphNode* current_node;
+
+  for (int i = m_start_index_of_node[node_iter->state_index]; i < m_start_index_of_node[node_iter->state_index + 1];
+       ++i) {
+    if (m_nodes[i].state == TemporalGraphNode::CLOSED) {
+      current_node = &m_nodes[i];
+      break;
+    }
+  }
+  int uncertain_from_time = current_node->arrival_time + 1;
+  int uncertain_from_index = current_node->state_index + 1;
+
   int next_arrival_time = current_node->arrival_time + 1;  // we assume that the cost of one movement is 1
   while (current_node != nullptr) {
     TimeStrategyKnot knot;
     knot.arrival_time = current_node->arrival_time;
     knot.waiting_duration = next_arrival_time - current_node->arrival_time - 1;
+    knot.isConfident = true;
     knot.state_index = current_node->state_index;
     knot.state = m_temporal_collision_info.getState(knot.state_index).state;
     strategy.push_back(knot);
@@ -300,7 +319,15 @@ std::vector<TimeStrategyKnot> TemporalGraph::getStrategy() {
 
   std::reverse(strategy.begin(), strategy.end());
 
-  return strategy;
+  for (int i = uncertain_from_index; i < m_temporal_collision_info.getNumberOfStates(); ++i) {
+    TimeStrategyKnot knot;
+    knot.arrival_time = uncertain_from_time++;
+    knot.waiting_duration = 0;
+    knot.isConfident = false;
+    knot.state_index = i;
+    knot.state = m_temporal_collision_info.getState(knot.state_index).state;
+    strategy.push_back(knot);
+  }
 }
 
 trajopt::TrajArray ConstructTrajArrayFromStrategy(const std::vector<TimeStrategyKnot>& strategy) {

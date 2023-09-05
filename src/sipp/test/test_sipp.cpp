@@ -82,7 +82,7 @@ TEST(sipp, sphere_collision_safe_intervals_construction) {
                    10,11,10;
   // clang-format on
   sipp::TemporalCollisionInfo temporal_info(0.1);
-  temporal_info.hatch(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
+  temporal_info.bake(reference_traj, obstacle_traj, robot_collision_geometry, obstacle_collision_geometry);
 
   vector<vector<TimeInterval>> ans_intervals{{{0, 6}}, {{0, 0}, {2, 6}}, {{0, 6}},
                                              {{0, 6}}, {{0, 3}, {5, 6}}, {{0, 6}}};
@@ -125,7 +125,7 @@ void validate_strategy(const vector<TimeStrategyKnot>& strategy, const std::vect
                i;
   }
 
-  // Arrival time + waiting duration should be within the safe interval
+  // If a valid time policy is fund, Arrival time + waiting duration should be within the safe interval
   for (int i = 0; i < strategy.size(); ++i) {
     const NominalState& state = states[strategy[i].state_index];
     bool found = false;
@@ -137,7 +137,7 @@ void validate_strategy(const vector<TimeStrategyKnot>& strategy, const std::vect
         break;
       }
     }
-    EXPECT_TRUE(found)
+    EXPECT_TRUE(strategy[i].isConfident == false || found)
         << boost::format("Arrival time + waiting duration should be within the safe interval at step %1%") % i << "\n"
         << "Safe intervals: " << state.safe_intervals << "\n"
         << "Arrival time: " << strategy[i].arrival_time << "\n"
@@ -161,8 +161,8 @@ TEST(sipp, graph_search) {
   info.getStatesContainer().push_back(state_2);
 
   TemporalGraph graph(info);
-  std::vector<TimeStrategyKnot> result = graph.getStrategy();
-
+  std::vector<TimeStrategyKnot> result;
+  EXPECT_TRUE(graph.getStrategy(result));
   validate_strategy(result, info.getStatesContainer());
   cout << result << endl;
 }
@@ -183,7 +183,10 @@ TEST(sipp, graph_search_no_solution) {
   info.getStatesContainer().push_back(state_2);
 
   TemporalGraph graph(info);
-  EXPECT_THROW(graph.getStrategy(), std::runtime_error);
+  std::vector<TimeStrategyKnot> result;
+  EXPECT_FALSE(graph.getStrategy(result));
+  validate_strategy(result, info.getStatesContainer());
+  cout << result << endl;
 }
 
 TEST(sipp, graph_search_switch_path) {
@@ -202,8 +205,8 @@ TEST(sipp, graph_search_switch_path) {
   info.getStatesContainer().push_back(state_2);
 
   TemporalGraph graph(info);
-  std::vector<TimeStrategyKnot> result = graph.getStrategy();
-
+  std::vector<TimeStrategyKnot> result;
+  EXPECT_TRUE(graph.getStrategy(result));
   validate_strategy(result, info.getStatesContainer());
   cout << result << endl;
 }
