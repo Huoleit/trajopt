@@ -31,6 +31,9 @@ void TrajPlotter::Add(const vector<PlotterPtr>& plotters) {
   BOOST_FOREACH (const PlotterPtr& plotter, plotters) { m_plotters.push_back(plotter); }
 }
 void TrajPlotter::AddLink(KinBody::LinkPtr link) {
+  if (link == nullptr) {
+    throw std::runtime_error("[TrajPlotter::AddLink] Null link pointer.");
+  }
   m_links.insert(link);
 }
 
@@ -52,7 +55,7 @@ void TrajPlotter::OptimizerCallback(OptProb*, DblVec& x) {
 
   PlotBodyTrajectory(handles, body, traj);
 
-  BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }
+  // BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }
 
   viewer->Idle();
 }
@@ -67,7 +70,7 @@ void TrajPlotter::OptimizerAnimationCallback(OptProb*, DblVec& x, bool plotBody)
 
   if (plotBody) PlotBodyTrajectory(handles, body, traj);
 
-  BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }  // Other plot function
+  // BOOST_FOREACH (PlotterPtr& plotter, m_plotters) { plotter->Plot(x, *m_env, handles); }  // Other plot function
 
   viewer->AnimateKinBody(body, joint_inds, traj, m_dt);
 
