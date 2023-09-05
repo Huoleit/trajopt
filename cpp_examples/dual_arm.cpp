@@ -42,10 +42,6 @@ int main() {
     bool success = env->Load(getDataPath() + "/abb/model.xml");
     FAIL_IF_FALSE(success);
   }
-  // {
-  //   bool success = env->Load(getDataPath() + "/table.xml");
-  //   FAIL_IF_FALSE(success);
-  // }
   viewer.reset(new OSGViewer(env));
   viewer->UpdateSceneData();
   env->AddViewer(viewer);
@@ -67,7 +63,6 @@ int main() {
   TrajPlotter plotter(env, pci.rad, prob->GetVars(), pci.basic_info.dt);
 
   plotter.Add(prob->getCosts());
-  plotter.AddLink(robot->GetLink("r_gripper_tool_frame"));
   plotter.AddAnimation(prob->GetObstacleRad(), prob->GetObstacleRadTraj(0, prob->GetNumSteps() - 1));
   // opt.addCallback(boost::bind(&TrajPlotter::OptimizerCallback, &plotter, _1, _2));
 
