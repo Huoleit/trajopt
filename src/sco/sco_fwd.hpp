@@ -40,4 +40,4 @@ struct AffExpr;
 typedef boost::shared_ptr<AffExpr> AffExprPtr;
 struct QuadExpr;
 typedef boost::shared_ptr<QuadExpr> QuadExprPtr;
-}
+}  // namespace sco

@@ -7,8 +7,9 @@
  *
  */
 
-#include <vector>
 #include <boost/shared_ptr.hpp>
+#include <vector>
+
 #include "sco/sco_fwd.hpp"
 #include "sco/solver_interface.hpp"
 
@@ -18,11 +19,11 @@ using std::vector;
 
 /**
 Stores convex terms in a objective
-For non-quadratic terms like hinge(x) and abs(x), it needs to add auxilliary variables and linear constraints to the model
-Note: When this object is deleted, the constraints and variables it added to the model are removed
+For non-quadratic terms like hinge(x) and abs(x), it needs to add auxilliary variables and linear constraints to the
+model Note: When this object is deleted, the constraints and variables it added to the model are removed
  */
 class ConvexObjective {
-public:
+ public:
   ConvexObjective(Model* model) : model_(model) {}
   void addAffExpr(const AffExpr&);
   void addQuadExpr(const QuadExpr&);
@@ -32,26 +33,24 @@ public:
   void addL1Norm(const AffExprVector&);
   void addL2Norm(const AffExprVector&);
   void addMax(const AffExprVector&);
-  
-  bool inModel() {
-    return model_ != NULL;
-  }
+
+  bool inModel() { return model_ != NULL; }
   void addConstraintsToModel();
   void removeFromModel();
   double value(const vector<double>& x);
-  
+
   ~ConvexObjective();
 
-  
   Model* model_;
   QuadExpr quad_;
   vector<Var> vars_;
   vector<AffExpr> eqs_;
   vector<AffExpr> ineqs_;
   vector<Cnt> cnts_;
-private:
-  ConvexObjective()  {}
-  ConvexObjective(ConvexObjective&)  {}
+
+ private:
+  ConvexObjective() {}
+  ConvexObjective(ConvexObjective&) {}
 };
 
 /**
@@ -59,7 +58,7 @@ Stores convex inequality constraints and affine equality constraints.
 Actually only affine inequality constraints are currently implemented.
 */
 class ConvexConstraints {
-public:
+ public:
   ConvexConstraints(Model* model) : model_(model) {}
   /** Expression that should == 0 */
   void addEqCnt(const AffExpr&);
@@ -69,9 +68,7 @@ public:
     assert(!inModel());
     model_ = model;
   }
-  bool inModel() {
-    return model_ != NULL;
-  }
+  bool inModel() { return model_ != NULL; }
   void addConstraintsToModel();
   void removeFromModel();
 
@@ -81,31 +78,33 @@ public:
   ~ConvexConstraints();
   vector<AffExpr> eqs_;
   vector<AffExpr> ineqs_;
-private:
-   Model* model_;
-   vector<Cnt> cnts_;
-   ConvexConstraints() : model_(NULL) {}
-   ConvexConstraints(ConvexConstraints&) {}
+
+ private:
+  Model* model_;
+  vector<Cnt> cnts_;
+  ConvexConstraints() : model_(NULL) {}
+  ConvexConstraints(ConvexConstraints&) {}
 };
 
 /**
 Non-convex cost function, which knows how to calculate its convex approximation (convexify() method)
 */
 class Cost {
-public:
+ public:
   /** Evaluate at solution vector x*/
   virtual double value(const vector<double>&) = 0;
   /** Convexify at solution vector x*/
   virtual ConvexObjectivePtr convex(const vector<double>& x, Model* model) = 0;
   /** Get problem variables associated with this cost */
-  virtual VarVector getVars() {return VarVector();}
+  virtual VarVector getVars() { return VarVector(); }
 
-  string name() {return name_;}
-  void setName(const string& name) {name_=name;}
+  string name() { return name_; }
+  void setName(const string& name) { name_ = name; }
   Cost() : name_("unnamed") {}
   Cost(const string& name) : name_(name) {}
   virtual ~Cost() {}
-protected:
+
+ protected:
   string name_;
 };
 
@@ -113,46 +112,46 @@ protected:
 Non-convex vector-valued constraint function, which knows how to calculate its convex approximation
 */
 class Constraint {
-public:
-
+ public:
   /** inequality vs equality */
   virtual ConstraintType type() = 0;
-  /** Evaluate at solution vector x*/  
+  /** Evaluate at solution vector x*/
   virtual vector<double> value(const vector<double>& x) = 0;
-  /** Convexify at solution vector x*/  
+  /** Convexify at solution vector x*/
   virtual ConvexConstraintsPtr convex(const vector<double>& x, Model* model) = 0;
-  /** Calculate constraint violations (positive part for inequality constraint, absolute value for inequality constraint)*/
+  /** Calculate constraint violations (positive part for inequality constraint, absolute value for inequality
+   * constraint)*/
   vector<double> violations(const vector<double>& x);
   /** Sum of violations */
-  double violation(const vector<double>& x);
+  virtual double violation(const vector<double>& x);
   /** Get problem variables associated with this constraint */
-  virtual VarVector getVars() {return VarVector();}
+  virtual VarVector getVars() { return VarVector(); }
 
-  string name() {return name_;}
-  void setName(const string& name) {name_=name;}
+  string name() { return name_; }
+  void setName(const string& name) { name_ = name; }
   Constraint() : name_("unnamed") {}
   Constraint(const string& name) : name_(name) {}
   virtual ~Constraint() {}
 
-protected:
+ protected:
   string name_;
 };
 
-class EqConstraint : public Constraint{
-public:
-  ConstraintType type() {return EQ;}
+class EqConstraint : public Constraint {
+ public:
+  ConstraintType type() { return EQ; }
 };
 
 class IneqConstraint : public Constraint {
-public:
-  ConstraintType type() {return INEQ;}
+ public:
+  ConstraintType type() { return INEQ; }
 };
 
 /**
 Non-convex optimization problem
 */
 class OptProb {
-public:
+ public:
   OptProb();
   /** create variables with bounds [-INFINITY, INFINITY]  */
   VarVector createVariables(const vector<string>& names);
@@ -175,24 +174,28 @@ public:
   void addConstraint(ConstraintPtr);
   void addEqConstraint(ConstraintPtr);
   void addIneqConstraint(ConstraintPtr);
+
+  void addIneqConstraintEvaluation(ConstraintPtr);
   virtual ~OptProb() {}
   /** Find closest point to solution vector x that satisfies linear inequality constraints */
-  vector<double> getCentralFeasiblePoint(const vector<double>& x);
-  vector<double> getClosestFeasiblePoint(const vector<double>& x);
+  vector<double> getCentralFeasiblePoint(const vector<double>& x) const;
+  vector<double> getClosestFeasiblePoint(const vector<double>& x) const;
 
   vector<ConstraintPtr> getConstraints() const;
-  vector<CostPtr>& getCosts() {return costs_;}
-  vector<ConstraintPtr>& getIneqConstraints() {return ineqcnts_;}
-  vector<ConstraintPtr>& getEqConstraints() {return eqcnts_;}
-  DblVec& getLowerBounds() {return lower_bounds_;}
-  DblVec& getUpperBounds() {return upper_bounds_;}
-  ModelPtr getModel() {return model_;}
-  vector<Var>& getVars() {return vars_;}
-  int getNumCosts() {return costs_.size();}
-  int getNumConstraints() {return eqcnts_.size() + ineqcnts_.size();}
-  int getNumVars() {return vars_.size();}
+  vector<ConstraintPtr> getLinearConstraints() const;
 
-protected:
+  const vector<CostPtr>& getCosts() const { return costs_; }
+  const vector<ConstraintPtr>& getIneqConstraints() const { return ineqcnts_; }
+  const vector<ConstraintPtr>& getEqConstraints() const { return eqcnts_; }
+  const DblVec& getLowerBounds() const { return lower_bounds_; }
+  const DblVec& getUpperBounds() const { return upper_bounds_; }
+  ModelPtr getModel() const { return model_; }
+  const vector<Var>& getVars() const { return vars_; }
+  int getNumCosts() const { return costs_.size(); }
+  int getNumConstraints() const { return eqcnts_.size() + ineqcnts_.size(); }
+  int getNumVars() const { return vars_.size(); }
+
+ protected:
   ModelPtr model_;
   vector<Var> vars_;
   vector<double> lower_bounds_;
@@ -200,6 +203,8 @@ protected:
   vector<CostPtr> costs_;
   vector<ConstraintPtr> eqcnts_;
   vector<ConstraintPtr> ineqcnts_;
+
+  vector<ConstraintPtr> linearIneqcnts_;
 
   OptProb(OptProb&);
 };
@@ -214,9 +219,8 @@ inline void setVec(DblVec& x, const VarVector& vars, const VecType& vals) {
 template <typename OutVecType>
 inline OutVecType getVec1(const vector<double>& x, const VarVector& vars) {
   OutVecType out(vars.size());
-  for (unsigned i=0; i < vars.size(); ++i) out[i] = x[vars[i].var_rep->index];
+  for (unsigned i = 0; i < vars.size(); ++i) out[i] = x[vars[i].var_rep->index];
   return out;
 }
 
-
-}
+}  // namespace sco

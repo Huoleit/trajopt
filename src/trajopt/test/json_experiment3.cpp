@@ -1,24 +1,27 @@
 #include <json/json.h>
-#include <iostream>
+
 #include <boost/assign.hpp>
+#include <iostream>
 using namespace std;
 using namespace boost::assign;
 using namespace Json;
-#include <boost/shared_ptr.hpp>
-#include "trajopt/problem_description.hpp"
 #include <gtest/gtest.h>
+
+#include <boost/shared_ptr.hpp>
+
+#include "trajopt/problem_description.hpp"
 using namespace trajopt;
 #ifdef __CDT_PARSER__
 #define NULL 0
 #endif
 
-
 #ifdef __CDT_PARSER__
 #define FAIL_IF_FALSE(expr)
 #else
-#define FAIL_IF_FALSE(expr) if (!expr) {\
-    printf("Failure: %s\n", #expr);\
-    return false;\
+#define FAIL_IF_FALSE(expr)         \
+  if (!expr) {                      \
+    printf("Failure: %s\n", #expr); \
+    return false;                   \
   }
 #endif
 
@@ -26,7 +29,7 @@ class CostInfoA : public CostInfo {
   int a;
   double b;
   string c;
-  CostPtr hatch() {return CostPtr();}
+  CostPtr hatch() { return CostPtr(); }
   virtual bool fromJson(const Value& v) {
     bool ok = true;
     ok &= CostInfo::fromJson(v);
@@ -42,7 +45,7 @@ CostInfoPtr createCostInfoA() {
   return CostInfoPtr(new CostInfoA());
 }
 
-TEST(json,  prob) {
+TEST(json, prob) {
   ProblemConstructionInfo pci;
 
   {
@@ -77,9 +80,7 @@ TEST(json,  prob) {
   }
 }
 
-
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

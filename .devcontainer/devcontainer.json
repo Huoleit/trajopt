@@ -1,0 +1,61 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/cpp
+{
+	"name": "trajopt-dev",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"runArgs": [
+		"--network",
+		"host",
+		"-e",
+		"DISPLAY=${env:DISPLAY}",
+		"-v",
+		"/tmp/.X11-unix/:/tmp/.X11-unix/"
+	],
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": { },
+	"capAdd": [
+		"SYS_PTRACE"
+	],
+	"securityOpt": [
+		"seccomp=unconfined"
+	],
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+			// Add the IDs of extensions you want installed when the container is created.
+			"extensions": [
+				"streetsidesoftware.code-spell-checker",
+				"tombonnike.vscode-status-bar-format-toggle",
+				"eamodio.gitlens",
+				"xaver.clang-format",
+				"ms-vscode.cpptools-extension-pack",
+				"GitHub.copilot",
+				"ms-azuretools.vscode-docker",
+				"ms-python.python",
+				"ZainChen.json",
+				"Meezilla.json",
+				"redhat.vscode-xml"
+			],
+			"settings": {
+				"terminal.integrated.defaultProfile.linux": "zsh",
+				"editor.tabSize": 4,
+				"editor.insertSpaces": true,
+				"editor.detectIndentation": true,
+				"cmake.generator": "Unix Makefiles",
+				"cmake.configureEnvironment": {
+					"-DCMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+				},
+				"clang-format.fallbackStyle": "Google",
+				"clang-format.executable": "clang-format-10"
+			}
+		}
+	},
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+	// Use 'postCreateCommand' to run commands after the container is created.
+	// "postCreateCommand": "gcc -v",
+	// Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode"
+}

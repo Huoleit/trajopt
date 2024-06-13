@@ -14,7 +14,7 @@ include_directories(
 if (APPLE)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
 else()
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -fvisibility=hidden")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -fvisibility=default")
 endif()
 
 #add_executable(robot_dynamics_experiment robot_dynamics_experiment.cpp)

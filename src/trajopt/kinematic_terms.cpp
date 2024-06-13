@@ -1,25 +1,26 @@
+#include "trajopt/kinematic_terms.hpp"
+
+#include <Eigen/Geometry>
+#include <boost/bind.hpp>
+#include <boost/format.hpp>
+#include <iostream>
+
 #include "sco/expr_ops.hpp"
 #include "sco/modeling_utils.hpp"
-#include "trajopt/kinematic_terms.hpp"
 #include "trajopt/rave_utils.hpp"
 #include "trajopt/utils.hpp"
 #include "utils/eigen_conversions.hpp"
 #include "utils/eigen_slicing.hpp"
 #include "utils/logging.hpp"
 #include "utils/stl_to_string.hpp"
-#include <boost/bind.hpp>
-#include <boost/format.hpp>
-#include <Eigen/Geometry>
-#include <iostream>
 
 using namespace std;
 using namespace sco;
 using namespace Eigen;
 using namespace util;
 
-
 namespace {
-  
+
 #if 0
 Vector3d rotVec(const Matrix3d& m) {
   Quaterniond q; q = m;
@@ -48,23 +49,22 @@ vector<T> concat(const vector<T>& a, const vector<T>& b) {
 }
 #endif
 
-}
+}  // namespace
 
 namespace trajopt {
 
-
-// CostPtr ConstructCost(VectorOfVectorPtr err_calc, const VarVector& vars, const VectorXd& coeffs, PenaltyType type, const string& name) {
+// CostPtr ConstructCost(VectorOfVectorPtr err_calc, const VarVector& vars, const VectorXd& coeffs, PenaltyType type,
+// const string& name) {
 //   return CostPtr(new CostFromErrFunc(err_calc), vars, coeffs, type, name);
 // }
-  
-  
+
 VectorXd CartPoseErrCalculator::operator()(const VectorXd& dof_vals) const {
   manip_->SetDOFValues(toDblVec(dof_vals));
   OR::Transform newpose = link_->GetTransform();
 
   OR::Transform pose_err = pose_inv_ * newpose;
   VectorXd err = concat(rotVec(pose_err.rot), toVector3d(pose_err.trans));
-  return err;  
+  return err;
 }
 
 #if 0
@@ -82,11 +82,10 @@ void CartPoseErrorPlotter::Plot(const DblVec& x, OR::EnvironmentBase& env, std::
   DblVec dof_vals = getDblVec(x, m_vars);
   calc->manip_->SetDOFValues(dof_vals);
   OR::Transform target = calc->pose_inv_.inverse(), cur = calc->link_->GetTransform();
-  PlotAxes(env, cur, .05,  handles);
-  PlotAxes(env, target, .05,  handles);
-  handles.push_back(env.drawarrow(cur.trans, target.trans, .005, OR::Vector(1,0,1,1)));
+  PlotAxes(env, cur, .05, handles);
+  PlotAxes(env, target, .05, handles);
+  handles.push_back(env.drawarrow(cur.trans, target.trans, .005, OR::Vector(1, 0, 1, 1)));
 }
-
 
 #if 0
 struct CartPositionErrCalculator {
@@ -108,17 +107,17 @@ struct CartPositionErrCalculator {
 
 MatrixXd CartVelJacCalculator::operator()(const VectorXd& dof_vals) const {
   int n_dof = manip_->GetDOF();
-  MatrixXd out(6, 2*n_dof);
+  MatrixXd out(6, 2 * n_dof);
   manip_->SetDOFValues(toDblVec(dof_vals.topRows(n_dof)));
   OR::Transform pose0 = link_->GetTransform();
   MatrixXd jac0 = manip_->PositionJacobian(link_->GetIndex(), pose0.trans);
   manip_->SetDOFValues(toDblVec(dof_vals.bottomRows(n_dof)));
   OR::Transform pose1 = link_->GetTransform();
   MatrixXd jac1 = manip_->PositionJacobian(link_->GetIndex(), pose1.trans);
-  out.block(0,0,3,n_dof) = -jac0;
-  out.block(0,n_dof,3,n_dof) = jac1;
-  out.block(3,0,3,n_dof) = jac0;
-  out.block(3,n_dof,3,n_dof) = -jac1;
+  out.block(0, 0, 3, n_dof) = -jac0;
+  out.block(0, n_dof, 3, n_dof) = jac1;
+  out.block(3, 0, 3, n_dof) = jac0;
+  out.block(3, n_dof, 3, n_dof) = -jac1;
   return out;
 }
 
@@ -129,11 +128,10 @@ VectorXd CartVelCalculator::operator()(const VectorXd& dof_vals) const {
   manip_->SetDOFValues(toDblVec(dof_vals.bottomRows(n_dof)));
   OR::Transform pose1 = link_->GetTransform();
   VectorXd out(6);
-  out.topRows(3) = toVector3d(pose1.trans - pose0.trans - OR::Vector(limit_,limit_,limit_));
-  out.bottomRows(3) = toVector3d( - pose1.trans + pose0.trans - OR::Vector(limit_, limit_, limit_));
+  out.topRows(3) = toVector3d(pose1.trans - pose0.trans - OR::Vector(limit_, limit_, limit_));
+  out.bottomRows(3) = toVector3d(-pose1.trans + pose0.trans - OR::Vector(limit_, limit_, limit_));
   return out;
 }
-
 
 #if 0
 CartVelConstraint::CartVelConstraint(const VarVector& step0vars, const VarVector& step1vars, RobotAndDOFPtr manip, KinBody::LinkPtr link, double distlimit) :
@@ -168,4 +166,4 @@ struct UpErrorCalculator {
   }
 };
 #endif
-}
+}  // namespace trajopt

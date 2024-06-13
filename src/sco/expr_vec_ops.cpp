@@ -2,12 +2,11 @@
 namespace sco {
 
 AffExpr varDot(const VectorXd& x, const VarVector& v) {
-
   AffExpr out;
   out.constant = 0;
   out.vars = v;
-  out.coeffs = vector<double>(x.data(), x.data()+x.size());
+  out.coeffs = vector<double>(x.data(), x.data() + x.size());
   return out;
 }
 
-}
+}  // namespace sco

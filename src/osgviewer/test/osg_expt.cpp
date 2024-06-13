@@ -1,9 +1,9 @@
-#include <osg/io_utils>
-#include <osgViewer/Viewer>
-#include <osgGA/TrackballManipulator>
-#include <osg/Geometry>
 #include <osg/Geode>
+#include <osg/Geometry>
 #include <osg/ShapeDrawable>
+#include <osg/io_utils>
+#include <osgGA/TrackballManipulator>
+#include <osgViewer/Viewer>
 using namespace osg;
 
 osgViewer::Viewer viewer;
@@ -16,10 +16,8 @@ int main(int argc, char* argv[]) {
   ref_ptr<Geode> geode = new Geode;
   root->addChild(geode.get());
 
-
-
-  for (int i=0; i < 10; i++) {
-    osg::Sphere* sphere = new osg::Sphere( Vec3f(i+1,10,0), .1*i);
+  for (int i = 0; i < 10; i++) {
+    osg::Sphere* sphere = new osg::Sphere(Vec3f(i + 1, 10, 0), .1 * i);
     osg::ShapeDrawable* sphereDrawable = new osg::ShapeDrawable(sphere);
     geode->addDrawable(sphereDrawable);
   }
@@ -31,15 +29,12 @@ int main(int argc, char* argv[]) {
 
   ref_ptr<osgGA::TrackballManipulator> manip = new osgGA::TrackballManipulator();
 
-
-    viewer.setCameraManipulator(manip);
+  viewer.setCameraManipulator(manip);
 
   viewer.setSceneData(root.get());
-  cam->setViewMatrixAsLookAt(Vec3f(10,0,0), Vec3f(10,1,0), Vec3f(0,0,1));
-  //manip->setHomePosition(Vec3f(10,0,0), Vec3f(11,1,0), Vec3f(10,0,1));
+  cam->setViewMatrixAsLookAt(Vec3f(10, 0, 0), Vec3f(10, 1, 0), Vec3f(0, 0, 1));
+  // manip->setHomePosition(Vec3f(10,0,0), Vec3f(11,1,0), Vec3f(10,0,1));
   //  cam->setProjectionMatrixAsPerspective(49,640/480., .1, 10);
 
   viewer.run();
-
-
 }

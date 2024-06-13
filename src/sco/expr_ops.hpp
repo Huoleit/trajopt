@@ -5,18 +5,16 @@
 
 namespace sco {
 
-
-
 ////// In-place operations ///////
 
 // multiplication
 inline void exprScale(AffExpr& v, double a) {
   v.constant *= a;
-  for (int i=0; i < v.coeffs.size(); ++i) v.coeffs[i] *= a;
+  for (int i = 0; i < v.coeffs.size(); ++i) v.coeffs[i] *= a;
 }
 inline void exprScale(QuadExpr& q, double a) {
   exprScale(q.affexpr, a);
-  for (int i=0; i < q.coeffs.size(); ++i) q.coeffs[i] *= a;
+  for (int i = 0; i < q.coeffs.size(); ++i) q.coeffs[i] *= a;
 }
 
 // addition
@@ -47,7 +45,6 @@ inline void exprInc(QuadExpr& a, const QuadExpr& b) {
   a.vars2.insert(a.vars2.end(), b.vars2.begin(), b.vars2.end());
 }
 
-
 // subtraction
 inline void exprDec(AffExpr& a, double b) {
   a.constant -= b;
@@ -77,20 +74,18 @@ inline void exprDec(QuadExpr& a, QuadExpr b) {
 
 inline AffExpr exprMult(const Var& a, double b) {
   AffExpr c(a);
-  exprScale(c,b);
+  exprScale(c, b);
   return c;
 }
 // multiplication
 inline AffExpr exprMult(AffExpr a, double b) {
-  exprScale(a,b);
+  exprScale(a, b);
   return a;
 }
 inline QuadExpr exprMult(QuadExpr a, double b) {
   exprScale(a, b);
   return a;
 }
-
-
 
 inline AffExpr exprAdd(AffExpr a, double b) {
   exprInc(a, b);
@@ -121,9 +116,6 @@ inline QuadExpr exprAdd(QuadExpr a, const QuadExpr& b) {
   return a;
 }
 
-
-
-
 inline AffExpr exprSub(AffExpr a, double b) {
   exprDec(a, b);
   return a;
@@ -153,18 +145,12 @@ inline QuadExpr exprSub(QuadExpr a, const QuadExpr& b) {
   return a;
 }
 
-
-
-
 //////////////////////
-
-
 
 QuadExpr exprSquare(const Var&);
 QuadExpr exprSquare(const AffExpr&);
 
 AffExpr cleanupAff(const AffExpr&);
-QuadExpr cleanupQuad(const QuadExpr&); //warning: might make it non-psd!
+QuadExpr cleanupQuad(const QuadExpr&);  // warning: might make it non-psd!
 
-
-}
+}  // namespace sco

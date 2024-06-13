@@ -13,7 +13,7 @@ add_executable(sco-unit
 
 target_link_libraries(sco-unit
   sco
-  gtest gtest_main
+  gtest_main
 )
 
 add_test(sco-unit ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/sco-unit)

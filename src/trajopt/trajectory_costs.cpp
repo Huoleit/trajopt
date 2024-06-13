@@ -1,9 +1,9 @@
-#include <Eigen/Core>
-#include "sco/expr_ops.hpp"
-#include "sco/expr_ops.hpp"
-#include "sco/modeling_utils.hpp"
 #include "trajopt/trajectory_costs.hpp"
 
+#include <Eigen/Core>
+
+#include "sco/expr_ops.hpp"
+#include "sco/modeling_utils.hpp"
 
 using namespace std;
 using namespace sco;
@@ -11,28 +11,24 @@ using namespace Eigen;
 
 namespace {
 
-
 static MatrixXd diffAxis0(const MatrixXd& in) {
-  return in.middleRows(1, in.rows()-1) - in.middleRows(0, in.rows()-1);
+  return in.middleRows(1, in.rows() - 1) - in.middleRows(0, in.rows() - 1);
 }
 
-
-}
+}  // namespace
 
 namespace trajopt {
 
-
-
 //////////// Quadratic cost functions /////////////////
 
-JointPosCost::JointPosCost(const VarVector& vars, const VectorXd& vals, const VectorXd& coeffs) :
-    Cost("JointPos"), vars_(vars), vals_(vals), coeffs_(coeffs) {
-    for (int i=0; i < vars.size(); ++i) {
-      if (coeffs[i] > 0) {
-        AffExpr diff = exprSub(AffExpr(vars[i]), AffExpr(vals[i]));
-        exprInc(expr_, exprMult(exprSquare(diff), coeffs[i]));
-      }
+JointPosCost::JointPosCost(const VarVector& vars, const VectorXd& vals, const VectorXd& coeffs)
+    : Cost("JointPos"), vars_(vars), vals_(vals), coeffs_(coeffs) {
+  for (int i = 0; i < vars.size(); ++i) {
+    if (coeffs[i] > 0) {
+      AffExpr diff = exprSub(AffExpr(vars[i]), AffExpr(vals[i]));
+      exprInc(expr_, exprMult(exprSquare(diff), coeffs[i]));
     }
+  }
 }
 double JointPosCost::value(const vector<double>& xvec) {
   VectorXd dofs = getVec(xvec, vars_);
@@ -44,15 +40,14 @@ ConvexObjectivePtr JointPosCost::convex(const vector<double>& x, Model* model) {
   return out;
 }
 
-
-JointVelCost::JointVelCost(const VarArray& vars, const VectorXd& coeffs) :
-    Cost("JointVel"), vars_(vars), coeffs_(coeffs) {
-  for (int i=0; i < vars.rows()-1; ++i) {
-    for (int j=0; j < vars.cols(); ++j) {
+JointVelCost::JointVelCost(const VarArray& vars, const VectorXd& coeffs)
+    : Cost("JointVel"), vars_(vars), coeffs_(coeffs) {
+  for (int i = 0; i < vars.rows() - 1; ++i) {
+    for (int j = 0; j < vars.cols(); ++j) {
       AffExpr vel;
-      exprInc(vel, exprMult(vars(i,j), -1));
-      exprInc(vel, exprMult(vars(i+1,j), 1));
-      exprInc(expr_, exprMult(exprSquare(vel),coeffs_[j]));
+      exprInc(vel, exprMult(vars(i, j), -1));
+      exprInc(vel, exprMult(vars(i + 1, j), 1));
+      exprInc(expr_, exprMult(exprSquare(vel), coeffs_[j]));
     }
   }
 }
@@ -66,16 +61,14 @@ ConvexObjectivePtr JointVelCost::convex(const vector<double>& x, Model* model) {
   return out;
 }
 
-
-
-JointAccCost::JointAccCost(const VarArray& vars, const VectorXd& coeffs) :
-    Cost("JointAcc"), vars_(vars), coeffs_(coeffs) {
-  for (int i=0; i < vars.rows()-2; ++i) {
-    for (int j=0; j < vars.cols(); ++j) {
+JointAccCost::JointAccCost(const VarArray& vars, const VectorXd& coeffs)
+    : Cost("JointAcc"), vars_(vars), coeffs_(coeffs) {
+  for (int i = 0; i < vars.rows() - 2; ++i) {
+    for (int j = 0; j < vars.cols(); ++j) {
       AffExpr acc;
-      exprInc(acc, exprMult(vars(i,j), -1));
-      exprInc(acc, exprMult(vars(i+1,j), 2));
-      exprInc(acc, exprMult(vars(i+2,j), -1));
+      exprInc(acc, exprMult(vars(i, j), -1));
+      exprInc(acc, exprMult(vars(i + 1, j), 2));
+      exprInc(acc, exprMult(vars(i + 2, j), -1));
       exprInc(expr_, exprMult(exprSquare(acc), coeffs_[j]));
     }
   }
@@ -90,4 +83,4 @@ ConvexObjectivePtr JointAccCost::convex(const vector<double>& x, Model* model) {
   return out;
 }
 
-}
+}  // namespace trajopt

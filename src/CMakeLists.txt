@@ -3,9 +3,6 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/src
 )
 
-
-add_definitions(-DEIGEN_DEFAULT_TO_ROW_MAJOR)
-
 # gcc 4.7 workaround:
 # execute_process(COMMAND ${CMAKE_C_COMPILER} -dumpversion
 #                 OUTPUT_VARIABLE GCC_VERSION)
@@ -27,14 +24,15 @@ set(OpenRAVE_BOTH_LIBRARIES ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
 add_subdirectory(sco)
 add_subdirectory(trajopt)
 add_subdirectory(utils)
+add_subdirectory(sipp)
 if(BUILD_CLOUDPROC) 
 	add_subdirectory(cloudproc)
 endif()
-if(BUILD_SANDBOX)
+if(ON)
 	add_subdirectory(sandbox)
 endif()
 add_subdirectory(osgviewer)
-if(BUILD_HUMANOIDS)
+if(ON)
   add_subdirectory(humanoids)
 endif()
 if(BUILD_SENSORSIM)

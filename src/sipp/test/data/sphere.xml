@@ -1,0 +1,15 @@
+<Robot name="sphereBot">
+    <KinBody>
+        <Body name="sphere_link" type="dynamic">
+            <Translation>0 0 0</Translation>
+            <Mass type="mimicgeom">
+                <density>1</density>
+            </Mass>
+
+            <Geom type="sphere">
+                <translation>0 0 0</translation>
+                <radius>.07</radius>
+            </Geom>
+        </Body>
+    </KinBody>
+</Robot>

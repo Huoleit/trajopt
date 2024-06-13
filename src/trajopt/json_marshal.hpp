@@ -1,11 +1,12 @@
 #pragma once
 #include <json/json.h>
-#include <vector>
-#include <boost/format.hpp>
-#include <string>
-#include <sstream>
-#include "macros.h"
 
+#include <boost/format.hpp>
+#include <sstream>
+#include <string>
+#include <vector>
+
+#include "macros.h"
 
 namespace json_marshal {
 
@@ -30,9 +31,8 @@ void fromJsonArray(const Json::Value& parent, std::vector<T>& ref) {
 template <class T>
 void fromJsonArray(const Json::Value& parent, std::vector<T>& ref, int size) {
   if (parent.size() != size) {
-    PRINT_AND_THROW(boost::format("expected list of size size %i. got: %s\n")%size%parent);
-  }
-  else {
+    PRINT_AND_THROW(boost::format("expected list of size size %i. got: %s\n") % size % parent);
+  } else {
     fromJsonArray(parent, ref);
   }
 }
@@ -46,8 +46,7 @@ void childFromJson(const Json::Value& parent, T& ref, const char* name, const T&
   if (parent.isMember(name)) {
     const Json::Value& v = parent[name];
     fromJson(v, ref);
-  }
-  else {
+  } else {
     ref = df;
   }
 }
@@ -56,13 +55,9 @@ void childFromJson(const Json::Value& parent, T& ref, const char* name) {
   if (parent.isMember(name)) {
     const Json::Value& v = parent[name];
     fromJson(v, ref);
-  }
-  else {
-    PRINT_AND_THROW(boost::format("missing field: %s")%name);
+  } else {
+    PRINT_AND_THROW(boost::format("missing field: %s") % name);
   }
 }
 
-
-
-
-}
+}  // namespace json_marshal

@@ -1,6 +1,7 @@
 #pragma once
 #include <Eigen/Core>
 #include <trajopt/common.hpp>
+
 #include "sco/modeling_utils.hpp"
 
 namespace trajopt {
@@ -15,9 +16,7 @@ struct ZMPConstraint : public IneqConstraint, public Plotter {
   DblVec value(const DblVec&);
   ConvexConstraintsPtr convex(const DblVec&, Model* model);
   void Plot(const DblVec& x, OR::EnvironmentBase& env, std::vector<OR::GraphHandlePtr>& handles);
-
 };
-
 
 struct StaticTorqueCost : public CostFromErrFunc {
   RobotAndDOFPtr m_rad;
@@ -35,4 +34,4 @@ struct FootHeightConstraint : public ConstraintFromFunc {
   FootHeightConstraint(RobotAndDOFPtr rad, OpenRAVE::KinBody::LinkPtr link, double height, const VarVector& vars);
 };
 
-}
+}  // namespace trajopt

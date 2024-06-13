@@ -1,0 +1,45 @@
+{
+  "basic_info": {
+    "n_steps": 50,
+    "manip": "leftarm",
+    "start_fixed": true,
+    "dt": 0.1
+  },
+  "costs": [
+    {
+      "type": "joint_acc",
+      "params": {
+        "coeffs": [ 1.0 ]
+      }
+    }
+  ],
+  "constraints": [
+    {
+      "type": "joint",
+      "name": "pos",
+      "params": {
+        "vals": [ 0.00137727, 0.241491, 1.6, -1.4641, -0.773889, -0.342138, -1.26866 ],
+        "timestep": 25,
+        "duration": 4
+      }
+    },
+    {
+      "type": "joint",
+      "name": "back_to_start",
+      "params": {
+        "vals": [ 1.24742, 0.59448, 3.3, -1.14187, -0.971013, -0.542677, -1.0877 ]
+      }
+    },
+    {
+      "type": "joint_vel_limits",
+      "name": "vel_limits",
+      "params": {
+        "vals": [ 2.0 ]
+      }
+    }
+  ],
+  "init_info": {
+    "type": "stationary",
+    "startpoint": [ 1.24742, 0.59448, 3.3, -1.14187, -0.971013, -0.542677, -1.0877 ]
+  }
+}

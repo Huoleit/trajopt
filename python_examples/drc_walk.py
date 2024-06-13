@@ -1,5 +1,5 @@
 import humanoidspy
-import trajoptpy
+import ctrajoptpy
 import openravepy as rave
 import numpy as np
 import json
@@ -256,8 +256,8 @@ if __name__ == "__main__":
         assert loadsuccess
         try:
             import IPython
-            viewer = trajoptpy.GetViewer(env)
-            IPython.lib.inputhook.set_inputhook(viewer.Step)
+            viewer = ctrajoptpy.GetViewer(env)
+            # IPython.lib.inputhook.set_inputhook(viewer.Step)
         except ImportError:
             print "can't set IPython input hook. you won't be able to interact with plot while IPython is idling"
             pass
@@ -275,10 +275,11 @@ if __name__ == "__main__":
     robot.SetDOFValues([-1.3],[robot.GetJoint("l_arm_shx").GetDOFIndex()])
     robot.SetDOFValues([1.3],[robot.GetJoint("r_arm_shx").GetDOFIndex()])
     standing_posture = robot.GetActiveDOFValues()
+
     ##################
-    trajoptpy.SetInteractive(True)
+    ctrajoptpy.SetInteractive(True)
     
-    cc = trajoptpy.GetCollisionChecker(env)
+    cc = ctrajoptpy.GetCollisionChecker(env)
     cc.ExcludeCollisionPair(robot.GetLink("l_foot"), env.GetKinBody("ProjectRoom").GetLink("Floor"))
     cc.ExcludeCollisionPair(robot.GetLink("r_foot"), env.GetKinBody("ProjectRoom").GetLink("Floor"))
     
@@ -297,29 +298,29 @@ if __name__ == "__main__":
 
         request = shift_weight_request(robot, n_steps, "l_foot")
         s = json.dumps(request)
-        prob = trajoptpy.ConstructProblem(s, env)
-        result = trajoptpy.OptimizeProblem(prob)
+        prob = ctrajoptpy.ConstructProblem(s, env)
+        result = ctrajoptpy.OptimizeProblem(prob)
         robot.SetActiveDOFValues(result.GetTraj()[-1])
         totaltraj.extend(result.GetTraj())
 
         request = step_forward_request(robot, n_steps, "r_foot",.1 if i==0 else .2, 0)
         s = json.dumps(request)
-        prob = trajoptpy.ConstructProblem(s, env)
-        result = trajoptpy.OptimizeProblem(prob)
+        prob = ctrajoptpy.ConstructProblem(s, env)
+        result = ctrajoptpy.OptimizeProblem(prob)
         robot.SetActiveDOFValues(result.GetTraj()[-1])
         totaltraj.extend(result.GetTraj())
     
         request = shift_weight_request(robot, n_steps, "r_foot")
         s = json.dumps(request)
-        prob = trajoptpy.ConstructProblem(s, env)
-        result = trajoptpy.OptimizeProblem(prob)
+        prob = ctrajoptpy.ConstructProblem(s, env)
+        result = ctrajoptpy.OptimizeProblem(prob)
         robot.SetActiveDOFValues(result.GetTraj()[-1])
         totaltraj.extend(result.GetTraj())
     
         request = step_forward_request(robot, n_steps, "l_foot",.2, 0)
         s = json.dumps(request)
-        prob = trajoptpy.ConstructProblem(s, env)
-        result = trajoptpy.OptimizeProblem(prob)
+        prob = ctrajoptpy.ConstructProblem(s, env)
+        result = ctrajoptpy.OptimizeProblem(prob)
         robot.SetActiveDOFValues(result.GetTraj()[-1])
         totaltraj.extend(result.GetTraj())
     
@@ -327,9 +328,9 @@ if __name__ == "__main__":
     
     request = press_button_request(robot, xyz_button, "l_hand", ["l_foot","r_foot"],10)
     s = json.dumps(request)
-    prob = trajoptpy.ConstructProblem(s, env)
-    result = trajoptpy.OptimizeProblem(prob)
+    prob = ctrajoptpy.ConstructProblem(s, env)
+    result = ctrajoptpy.OptimizeProblem(prob)
     totaltraj.extend(result.GetTraj())
 
-    viewer = trajoptpy.GetViewer(env)
+    viewer = ctrajoptpy.GetViewer(env)
     animate_traj(viewer, robot, totaltraj)

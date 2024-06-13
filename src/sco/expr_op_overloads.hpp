@@ -43,9 +43,6 @@ inline QuadExpr operator+(const QuadExpr& x, const QuadExpr& y) {
   return exprAdd(x, y);
 }
 
-
-
-
 inline AffExpr operator-(const Var& x, double y) {
   return exprSub(AffExpr(x), y);
 }
@@ -88,8 +85,6 @@ inline QuadExpr operator-(const QuadExpr& x, const QuadExpr& y) {
 
 ///////////////
 
-
-
 inline AffExpr operator*(double a, const Var& b) {
   return exprMult(b, a);
 }
@@ -117,4 +112,4 @@ inline AffExpr operator-(const AffExpr& a) {
   return exprMult(a, -1);
 }
 
-}
+}  // namespace sco

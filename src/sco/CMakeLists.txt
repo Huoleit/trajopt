@@ -27,7 +27,7 @@ if (HAVE_BPMPD)
   	set(BPMPD_LIBRARY "${CMAKE_SOURCE_DIR}/3rdpartylib/bpmpd_linux32.a")
   endif()
   
-  target_link_libraries(bpmpd_caller ${BPMPD_LIBRARY})
+  target_link_libraries(bpmpd_caller ${BPMPD_LIBRARY} -static)
   list(APPEND SCO_SOURCE_FILES bpmpd_interface.cpp)  
   set_property(SOURCE bpmpd_interface.cpp APPEND PROPERTY COMPILE_DEFINITIONS BPMPD_CALLER="\\\"${CMAKE_BINARY_DIR}/bin/bpmpd_caller\\\"")
 
@@ -48,6 +48,10 @@ endif(GUROBI_FOUND)
 add_library(sco
   ${SCO_SOURCE_FILES}
 )
+# sco depends on different solver libraries
+if (HAVE_BPMPD) 
+  add_dependencies(sco bpmpd_caller)
+endif()
 
 
 set (SCO_LINK_LIBS utils)

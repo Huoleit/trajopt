@@ -1,13 +1,15 @@
 #include "modeling.hpp"
-#include "utils/logging.hpp"
-#include <boost/format.hpp>
+
 #include <boost/foreach.hpp>
+#include <boost/format.hpp>
 #include <cstdio>
-#include "expr_ops.hpp"
-#include "sco_common.hpp"
-#include "macros.h"
 #include <iostream>
 #include <sstream>
+
+#include "expr_ops.hpp"
+#include "macros.h"
+#include "sco_common.hpp"
+#include "utils/logging.hpp"
 
 using namespace std;
 
@@ -45,17 +47,17 @@ void ConvexObjective::addAbs(const AffExpr& affexpr, double coeff) {
   eqs_.push_back(affeq);
 }
 void ConvexObjective::addHinges(const AffExprVector& ev) {
-  for (size_t i=0; i < ev.size(); ++i) addHinge(ev[i],1);
+  for (size_t i = 0; i < ev.size(); ++i) addHinge(ev[i], 1);
 }
 void ConvexObjective::addL1Norm(const AffExprVector& ev) {
-  for (size_t i=0; i < ev.size(); ++i) addAbs(ev[i],1);
+  for (size_t i = 0; i < ev.size(); ++i) addAbs(ev[i], 1);
 }
 void ConvexObjective::addL2Norm(const AffExprVector& ev) {
-  for (size_t i=0; i < ev.size(); ++i) exprInc(quad_, exprSquare(ev[i]));
+  for (size_t i = 0; i < ev.size(); ++i) exprInc(quad_, exprSquare(ev[i]));
 }
 void ConvexObjective::addMax(const AffExprVector& ev) {
   Var m = model_->addVar("max", -INFINITY, INFINITY);
-  for (size_t i=0; i < ev.size(); ++i) {
+  for (size_t i = 0; i < ev.size(); ++i) {
     ineqs_.push_back(ev[i]);
     exprDec(ineqs_.back(), m);
   }
@@ -63,12 +65,8 @@ void ConvexObjective::addMax(const AffExprVector& ev) {
 
 void ConvexObjective::addConstraintsToModel() {
   cnts_.reserve(eqs_.size() + ineqs_.size());
-  BOOST_FOREACH(const AffExpr& aff, eqs_) {
-    cnts_.push_back(model_->addEqCnt(aff, ""));
-  }
-  BOOST_FOREACH(const AffExpr& aff, ineqs_) {
-    cnts_.push_back(model_->addIneqCnt(aff, ""));
-  }
+  BOOST_FOREACH (const AffExpr& aff, eqs_) { cnts_.push_back(model_->addEqCnt(aff, "")); }
+  BOOST_FOREACH (const AffExpr& aff, ineqs_) { cnts_.push_back(model_->addIneqCnt(aff, "")); }
 }
 
 void ConvexObjective::removeFromModel() {
@@ -90,12 +88,8 @@ void ConvexConstraints::addIneqCnt(const AffExpr& aff) {
 
 void ConvexConstraints::addConstraintsToModel() {
   cnts_.reserve(eqs_.size() + ineqs_.size());
-  BOOST_FOREACH(const AffExpr& aff, eqs_) {
-    cnts_.push_back(model_->addEqCnt(aff, ""));
-  }
-  BOOST_FOREACH(const AffExpr& aff, ineqs_) {
-    cnts_.push_back(model_->addIneqCnt(aff, ""));
-  }
+  BOOST_FOREACH (const AffExpr& aff, eqs_) { cnts_.push_back(model_->addEqCnt(aff, "")); }
+  BOOST_FOREACH (const AffExpr& aff, ineqs_) { cnts_.push_back(model_->addIneqCnt(aff, "")); }
 }
 
 void ConvexConstraints::removeFromModel() {
@@ -106,8 +100,10 @@ void ConvexConstraints::removeFromModel() {
 vector<double> ConvexConstraints::violations(const vector<double>& x) {
   DblVec out;
   out.reserve(eqs_.size() + ineqs_.size());
-  BOOST_FOREACH(const AffExpr& aff, eqs_) out.push_back(fabs(aff.value(x.data())));
-  BOOST_FOREACH(const AffExpr& aff, ineqs_) out.push_back(pospart(aff.value(x.data())));
+  BOOST_FOREACH (const AffExpr& aff, eqs_)
+    out.push_back(fabs(aff.value(x.data())));
+  BOOST_FOREACH (const AffExpr& aff, ineqs_)
+    out.push_back(pospart(aff.value(x.data())));
   return out;
 }
 double ConvexConstraints::violation(const vector<double>& x) {
@@ -118,20 +114,18 @@ ConvexConstraints::~ConvexConstraints() {
   if (inModel()) removeFromModel();
 }
 
-double ConvexObjective::value(const vector<double>& x)  {
+double ConvexObjective::value(const vector<double>& x) {
   return quad_.value(x);
 }
-
 
 vector<double> Constraint::violations(const DblVec& x) {
   DblVec val = value(x);
   DblVec out(val.size());
 
   if (type() == EQ) {
-    for (size_t i=0; i < val.size(); ++i) out[i] = fabs(val[i]);
-  }
-  else { // type() == INEQ
-    for (size_t i=0; i < val.size(); ++i) out[i] = pospart(val[i]);
+    for (size_t i = 0; i < val.size(); ++i) out[i] = fabs(val[i]);
+  } else {  // type() == INEQ
+    for (size_t i = 0; i < val.size(); ++i) out[i] = pospart(val[i]);
   }
 
   return out;
@@ -153,13 +147,13 @@ VarVector OptProb::createVariables(const vector<string>& var_names, const DblVec
   vars_.reserve(n_cur + n_add);
   lower_bounds_.reserve(n_cur + n_add);
   upper_bounds_.reserve(n_cur + n_add);
-  for (size_t i=0; i < var_names.size(); ++i) {
+  for (size_t i = 0; i < var_names.size(); ++i) {
     vars_.push_back(model_->addVar(var_names[i], lb[i], ub[i]));
     lower_bounds_.push_back(lb[i]);
     upper_bounds_.push_back(ub[i]);
   }
   model_->update();
-  return VarVector(vars_.end()-n_add, vars_.end());
+  return VarVector(vars_.end() - n_add, vars_.end());
 }
 void OptProb::setLowerBounds(const vector<double>& lb) {
   assert(lb.size() == vars_.size());
@@ -180,17 +174,29 @@ void OptProb::addCost(CostPtr cost) {
   costs_.push_back(cost);
 }
 void OptProb::addConstraint(ConstraintPtr cnt) {
-  if (cnt->type() == EQ) addEqConstraint(cnt);
-  else addIneqConstraint(cnt);
+  if (cnt->type() == EQ)
+    addEqConstraint(cnt);
+  else
+    addIneqConstraint(cnt);
 }
 void OptProb::addEqConstraint(ConstraintPtr cnt) {
-  assert (cnt->type() == EQ);
+  assert(cnt->type() == EQ);
   eqcnts_.push_back(cnt);
 }
 void OptProb::addIneqConstraint(ConstraintPtr cnt) {
-  assert (cnt->type() == INEQ);
+  assert(cnt->type() == INEQ);
   ineqcnts_.push_back(cnt);
 }
+
+void OptProb::addIneqConstraintEvaluation(ConstraintPtr cnt) {
+  assert(cnt->type() == INEQ);
+  linearIneqcnts_.push_back(cnt);
+}
+
+vector<ConstraintPtr> OptProb::getLinearConstraints() const {
+  return linearIneqcnts_;
+}
+
 vector<ConstraintPtr> OptProb::getConstraints() const {
   vector<ConstraintPtr> out;
   out.reserve(eqcnts_.size() + ineqcnts_.size());
@@ -199,33 +205,35 @@ vector<ConstraintPtr> OptProb::getConstraints() const {
   return out;
 }
 void OptProb::addLinearConstraint(const AffExpr& expr, ConstraintType type) {
-  if (type == EQ) model_->addEqCnt(expr, "");
-  else model_->addIneqCnt(expr, "");
+  if (type == EQ)
+    model_->addEqCnt(expr, "");
+  else
+    model_->addIneqCnt(expr, "");
 }
 
-vector<double> OptProb::getCentralFeasiblePoint(const vector<double>& x) {
+vector<double> OptProb::getCentralFeasiblePoint(const vector<double>& x) const {
   assert(x.size() == lower_bounds_.size());
   DblVec center(x.size());
-  for (int i=0; i < x.size(); ++i) center[i] = (lower_bounds_[i] + upper_bounds_[i])/2;
+  for (int i = 0; i < x.size(); ++i) center[i] = (lower_bounds_[i] + upper_bounds_[i]) / 2;
   return getClosestFeasiblePoint(center);
 }
-vector<double> OptProb::getClosestFeasiblePoint(const vector<double>& x) {
+vector<double> OptProb::getClosestFeasiblePoint(const vector<double>& x) const {
   LOG_DEBUG("getClosestFeasiblePoint");
   assert(vars_.size() == x.size());
   QuadExpr obj;
-  for (int i=0; i < x.size(); ++i) {
-    exprInc(obj, exprSquare(exprSub(AffExpr(vars_[i]),x[i])));
+  for (int i = 0; i < x.size(); ++i) {
+    exprInc(obj, exprSquare(exprSub(AffExpr(vars_[i]), x[i])));
   }
   model_->setVarBounds(vars_, lower_bounds_, upper_bounds_);
   model_->setObjective(obj);
   CvxOptStatus status = model_->optimize();
-  if(status != CVX_SOLVED) {
+  if (status != CVX_SOLVED) {
     model_->writeToFile("/tmp/fail.lp");
-    PRINT_AND_THROW("couldn't find a feasible point. there's probably a problem with variable bounds (e.g. joint limits). wrote to /tmp/fail.lp");
+    PRINT_AND_THROW(
+        "couldn't find a feasible point. there's probably a problem with variable bounds (e.g. joint limits). wrote to "
+        "/tmp/fail.lp");
   }
   return model_->getVarValues(vars_);
 }
 
-
-
-}
+}  // namespace sco

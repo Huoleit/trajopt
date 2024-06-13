@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.10)
+
 project(trajopt)
+
+cmake_policy(SET CMP0054 NEW)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
@@ -8,7 +11,10 @@ if (DEVEL_MODE)
   set(CMAKE_CXX_FLAGS "-Werror -Wall -Wno-sign-compare")
 endif(DEVEL_MODE)
 
-set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")        
+set(CMAKE_INCLUDE_SYSTEM_FLAG_CXX "-isystem ")      
+
+# DEBUG_BULLET_GUI is used in bullet_collision_checker.cpp. Turn on the interal debug drawing of bullet
+set(DEBUG_BULLET_GUI OFF CACHE BOOL "Turn on the interal debug drawing of bullet" FORCE)
 
 # http://cmake.3232098.n2.nabble.com/Default-value-for-CMAKE-BUILD-TYPE-td7550756.html
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -19,9 +25,31 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+if(COMPILER_SUPPORTS_MARCH_NATIVE AND CMAKE_BUILD_TYPE MATCHES "Release")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+endif()
+
 find_package(Eigen REQUIRED)
 find_package(Boost COMPONENTS system python thread program_options REQUIRED)
 find_package(OpenRAVE REQUIRED)
+# function(dump_cmake_variables)
+#     get_cmake_property(_variableNames VARIABLES)
+#     list (SORT _variableNames)
+#     foreach (_variableName ${_variableNames})
+#         if (ARGV0)
+#             unset(MATCHED)
+#             string(REGEX MATCH ${ARGV0} MATCHED ${_variableName})
+#             if (NOT MATCHED)
+#                 continue()
+#             endif()
+#         endif()
+#         message(STATUS "${_variableName}=${${_variableName}}")
+#     endforeach()
+# endfunction()
+# dump_cmake_variables()
+# message(FATAL_ERROR "")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -42,9 +70,14 @@ option(BUILD_HUMANOIDS "build humanoids stuff" OFF)
 option(BUILD_SENSORSIM "build sensor simulation" OFF)
 
 include("${CMAKE_SOURCE_DIR}/cmake/boost-python.cmake")
-include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
+# include("${CMAKE_SOURCE_DIR}/cmake/add_python_unit_tests.cmake")
 
+set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wfatal-errors")
+
+include(GoogleTest)
 
 add_subdirectory(ext)
 add_subdirectory(src)
+
+add_subdirectory(cpp_examples)
 

@@ -1,0 +1,13 @@
+BasedOnStyle: Google
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveMacros: "true"
+AllowShortFunctionsOnASingleLine: Inline
+
+BreakBeforeBraces: Attach
+
+ColumnLimit: "120"
+
+# Force pointer alignment with the type (left).
+DerivePointerAlignment: false
+PointerAlignment: Left

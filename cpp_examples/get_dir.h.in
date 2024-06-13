@@ -1,0 +1,13 @@
+#pragma once
+
+#include <string>
+
+namespace trajopt {
+inline std::string getDataPath() {
+  return "@PROJECT_DATA_DIR@";
+}
+
+inline std::string getConfigPath() {
+  return "@PROJECT_CONFIG_DIR@";
+}
+}  // namespace trajopt

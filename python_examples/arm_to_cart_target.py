@@ -5,7 +5,7 @@ parser.add_argument("--position_only", action="store_true")
 args = parser.parse_args()
 
 import openravepy
-import trajoptpy
+import ctrajoptpy
 import json
 import numpy as np
 import trajoptpy.kin_utils as ku
@@ -15,7 +15,7 @@ env.StopSimulation()
 env.Load("robots/pr2-beta-static.zae")
 env.Load("../data/table.xml")
 
-trajoptpy.SetInteractive(args.interactive) # pause every iteration, until you press 'p'. Press escape to disable further plotting
+ctrajoptpy.SetInteractive(args.interactive) # pause every iteration, until you press 'p'. Press escape to disable further plotting
 
 robot = env.GetRobots()[0]
 joint_start = [-1.832, -0.332, -1.011, -1.437, -1.1  , -1.926,  3.074]
@@ -82,9 +82,9 @@ request = {
 if args.position_only: request["constraints"][0]["params"]["rot_coeffs"] = [0,0,0]
 
 s = json.dumps(request) # convert dictionary into json-formatted string
-prob = trajoptpy.ConstructProblem(s, env) # create object that stores optimization problem
-result = trajoptpy.OptimizeProblem(prob) # do optimization
-print result
+prob = ctrajoptpy.ConstructProblem(s, env) # create object that stores optimization problem
+result = ctrajoptpy.OptimizeProblem(prob) # do optimization
+print(result)
 
 from trajoptpy.check_traj import traj_is_safe
 prob.SetRobotActiveDOFs() # set robot DOFs to DOFs in optimization problem
